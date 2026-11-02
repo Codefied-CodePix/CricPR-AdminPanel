@@ -1,0 +1,79 @@
+name: Deploy CricPR Admin - Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cricpr-admin-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and Deploy Production
+    runs-on: [self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build production application
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_PROD }}
+        run: pnpm run build
+
+      - name: Verify build output
+        run: test -s dist/index.html
+
+      - name: Deploy production build
+        env:
+          DEPLOY_PATH: ${{ vars.PROD_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ "$DEPLOY_PATH" != "/var/www/cricpr-v2-admin" ]; then
+            echo "Unexpected production deployment path"
+            exit 1
+          fi
+
+          RELEASES="$DEPLOY_PATH/releases"
+          RELEASE="$RELEASES/$GITHUB_SHA"
+
+          mkdir -p "$RELEASES"
+          mkdir -p "$RELEASE"
+
+          cp -a dist/. "$RELEASE/"
+
+          ln -sfn "releases/$GITHUB_SHA" "$DEPLOY_PATH/current-new"
+          mv -Tf "$DEPLOY_PATH/current-new" "$DEPLOY_PATH/current"
+
+          # Retain the latest five releases
+          find "$RELEASES" -mindepth 1 -maxdepth 1 \
+            -type d -printf '%T@ %p\n' |
+            sort -rn |
+            tail -n +6 |
+            cut -d' ' -f2- |
+            while IFS= read -r old_release; do
+              rm -rf -- "$old_release"
+            done
+
+          echo "Production deployment completed successfully."
