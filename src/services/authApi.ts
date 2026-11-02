@@ -1,21 +1,14 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData } from './api'
+import type { V2Envelope } from './api'
 
-// Types
 export interface LoginRequest {
   email: string
   password: string
 }
 
 export interface UserRole {
-  _id: string
+  id: string
   name: string
-  permissions: Array<{
-    _id: string
-    resource: string
-    action: string
-    __v: number
-  }>
-  __v: number
 }
 
 export interface User {
@@ -24,12 +17,13 @@ export interface User {
   gender?: string
   email: string
   roles: UserRole[]
-  isEmailVerified: boolean
-  isPhoneVerified: boolean
+  permissions?: Array<{ id: string; resource: string; action: string }>
+  isEmailVerified?: boolean
+  isPhoneVerified?: boolean
   provider?: string
   status?: string
   fcmToken?: string | null
-  profilePhoto?: string | null
+  profilePicture?: string | null
 }
 
 export interface Token {
@@ -37,105 +31,95 @@ export interface Token {
   expires: string
 }
 
-export interface LoginResponse {
-  user: User
-  tokens: {
-    access: Token
-    refresh: Token
-  }
+export interface AuthTokens {
+  access: Token
+  refresh: Token
 }
 
-// Auth API functions
+export interface LoginResponse {
+  user: User
+  tokens: AuthTokens
+}
+
+export interface UploadContentResponse {
+  url?: string
+  updated?: boolean
+  entity?: string
+  id?: string
+  field?: string
+}
+
 export const authApi = {
-  /**
-   * Admin login
-   */
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-      const response = await api.post<LoginResponse>(
-        '/auth/adminLogin',
+      const response = await api.post<V2Envelope<LoginResponse>>(
+        '/auth/admin/login',
         credentials
       )
-      return response.data
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Refresh access token
-   */
-  refreshToken: async (refreshToken: string): Promise<{ access: Token }> => {
+  refreshToken: async (refreshToken: string): Promise<LoginResponse> => {
     try {
-      const response = await api.post<{ access: Token }>(
-        '/auth/refresh',
-        { refreshToken }
-      )
-      return response.data
+      const response = await api.post<V2Envelope<LoginResponse>>('/auth/refresh', {
+        refreshToken,
+      })
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Admin logout
-   */
   logout: async (refreshToken: string): Promise<void> => {
     try {
-      await api.post('/admin/logout', { refreshToken })
+      await api.post('/auth/logout', { refreshToken })
     } catch (error) {
-      // Even if logout fails on backend, we still logout on frontend
       console.error('Logout error:', error)
     }
   },
 
-  /**
-   * Edit admin name
-   */
-  editName: async (name: string): Promise<void> => {
+  editName: async (name: string): Promise<User> => {
     try {
-      await api.patch('/admin/edit-name', { name })
+      const response = await api.patch<V2Envelope<User>>('/admin/edit-name', { name })
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
   /**
-   * Edit admin profile photo
+   * Upload profile picture via contents API (persists when type=profilePicture).
    */
-  editProfilePhoto: async (file: File): Promise<void> => {
+  editProfilePhoto: async (file: File): Promise<UploadContentResponse> => {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      
-      // Axios will automatically set Content-Type with boundary for FormData
-      await api.patch('/admin/edit-profilePhoto', formData)
+      formData.append('type', 'profilePicture')
+
+      const response = await api.post<V2Envelope<UploadContentResponse>>(
+        '/contents/upload',
+        formData
+      )
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
   /**
-   * Verify password
+   * Set profile picture URL explicitly (optional follow-up to upload).
    */
-  verifyPassword: async (currentPassword: string): Promise<{ success: boolean; message?: string; error?: string; code?: number }> => {
+  setProfilePictureUrl: async (profilePicture: string): Promise<User> => {
     try {
-      const response = await api.post<{ success: boolean; message?: string; error?: string; code?: number }>('/admin/vp', { currentPassword })
-      return response.data
-    } catch (error) {
-      throw new Error(handleApiError(error))
-    }
-  },
-
-  /**
-   * Change password
-   */
-  changePassword: async (newPassword: string, confirmPassword: string): Promise<void> => {
-    try {
-      await api.patch('/admin/cp', { newPassword, confirmPassword })
+      const response = await api.patch<V2Envelope<User>>('/admin/edit-profilePhoto', {
+        profilePicture,
+      })
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 }
-

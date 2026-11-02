@@ -1,20 +1,14 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, type V2Envelope, type V2Pagination } from './api'
 
-// Types
 export interface Player {
   playerId: string
+  userId?: string | null
   name: string
   teams: Array<{
-    _id: string
-    logo: string
-    players: string[]
-    name: string
-    location: string
-    captain: string
-    createdBy: string
-    createdAt: string
-    updatedAt: string
-    __v: number
+    id?: string
+    logo?: string
+    name?: string
+    location?: string
   }>
   city: string
   playingRole: string
@@ -27,6 +21,7 @@ export interface Player {
   strikeRate: number
   average: number
   economy: number
+  profilePicture?: string | null
 }
 
 export interface PlayersResponse {
@@ -47,15 +42,46 @@ export interface PlayersParams {
   role?: string
 }
 
-// Players API functions
+function mapPlayer(row: Record<string, unknown>): Player {
+  const user = (row.user || {}) as Record<string, unknown>
+  return {
+    playerId: String(row.id || ''),
+    userId: (row.userId as string | null | undefined) ?? (user.id as string | undefined) ?? null,
+    name: String(user.name || 'Unknown'),
+    teams: [],
+    city: String(user.city || ''),
+    playingRole: String(row.playingRole || ''),
+    battingStyle: String(row.battingStyle || ''),
+    bowlingStyle: String(row.bowlingStyle || ''),
+    isWicketKeeper: Boolean(row.isWicketKeeper),
+    matches: 0,
+    runs: 0,
+    wickets: 0,
+    strikeRate: 0,
+    average: 0,
+    economy: 0,
+    profilePicture: (user.profilePicture as string | null | undefined) ?? null,
+  }
+}
+
+function toListResponse(
+  rows: Player[],
+  pagination: V2Pagination | undefined,
+  params: PlayersParams
+): PlayersResponse {
+  return {
+    results: rows,
+    page: pagination?.page ?? params.page ?? 1,
+    limit: pagination?.limit ?? params.limit ?? 20,
+    totalResults: pagination?.total ?? rows.length,
+    totalPages: pagination?.totalPages ?? 1,
+  }
+}
+
 export const playersApi = {
-  /**
-   * Get all players with filters and pagination
-   */
   getPlayers: async (params: PlayersParams = {}): Promise<PlayersResponse> => {
     try {
       const queryParams = new URLSearchParams()
-      
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.name) queryParams.append('name', params.name)
@@ -64,24 +90,21 @@ export const playersApi = {
       if (params.bowlingStyle) queryParams.append('bowlingStyle', params.bowlingStyle)
       if (params.role) queryParams.append('role', params.role)
 
-      const response = await api.get<PlayersResponse>(
+      const response = await api.get<V2Envelope<Record<string, unknown>[]>>(
         `/admin/players?${queryParams.toString()}`
       )
-      return response.data
+      const rows = Array.isArray(response.data.data) ? response.data.data : []
+      return toListResponse(rows.map(mapPlayer), response.data.pagination, params)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Delete player by ID
-   */
   deletePlayer: async (playerId: string): Promise<void> => {
     try {
-      await api.delete(`/admin/players/${playerId}`)
+      await api.delete(`/players/${playerId}`)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 }
-

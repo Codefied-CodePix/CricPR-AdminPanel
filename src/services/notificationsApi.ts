@@ -1,10 +1,12 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData, type V2Envelope } from './api'
 
-// Types
 export interface Notification {
+  id?: string
   title: string
   body: string
   sendAt: string
+  createdAt?: string
+  read?: boolean
 }
 
 export interface NotificationsResponse {
@@ -23,41 +25,63 @@ export interface NotificationsParams {
 export interface SendNotificationPayload {
   title: string
   body: string
-  metadata?: Record<string, any>
-  action?: string
-  userIds?: string[] // Empty array [] for all users, array of IDs for selected users
+  /** User UUIDs — omit or empty to broadcast to all */
+  userIds?: string[]
 }
 
-// Notifications API functions
 export const notificationsApi = {
   /**
-   * Get all notifications with pagination
+   * Admin inbox (GET /notifications) — not broadcast history.
+   * Kept for optional display; V2 has no admin broadcast history endpoint.
    */
-  getNotifications: async (params: NotificationsParams = {}): Promise<NotificationsResponse> => {
+  getNotifications: async (
+    params: NotificationsParams = {}
+  ): Promise<NotificationsResponse> => {
     try {
       const queryParams = new URLSearchParams()
-      
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.limit) queryParams.append('limit', params.limit.toString())
 
-      const response = await api.get<NotificationsResponse>(
-        `/admin/notifications?${queryParams.toString()}`
+      const response = await api.get<V2Envelope<Array<Record<string, unknown>>>>(
+        `/notifications?${queryParams.toString()}`
       )
-      return response.data
+      const rows = Array.isArray(response.data.data) ? response.data.data : []
+      const pagination = response.data.pagination
+      return {
+        results: rows.map((n) => ({
+          id: String(n.id || ''),
+          title: String(n.title || ''),
+          body: String(n.body || ''),
+          sendAt: String(n.createdAt || n.sendAt || new Date().toISOString()),
+          createdAt: n.createdAt ? String(n.createdAt) : undefined,
+          read: Boolean(n.read),
+        })),
+        page: pagination?.page ?? params.page ?? 1,
+        limit: pagination?.limit ?? params.limit ?? 10,
+        totalResults: pagination?.total ?? rows.length,
+        totalPages: pagination?.totalPages ?? 1,
+      }
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Send notification to users
-   */
-  sendNotification: async (payload: SendNotificationPayload): Promise<void> => {
+  sendNotification: async (payload: SendNotificationPayload): Promise<unknown> => {
     try {
-      await api.post('/admin/notifications/send', payload)
+      const body: SendNotificationPayload = {
+        title: payload.title,
+        body: payload.body,
+      }
+      if (payload.userIds && payload.userIds.length > 0) {
+        body.userIds = payload.userIds
+      }
+      const response = await api.post<V2Envelope<unknown>>(
+        '/admin/notifications/send',
+        body
+      )
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 }
-

@@ -229,7 +229,7 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10">
                                 <AvatarImage
-                                  src={player.teams[0]?.logo}
+                                  src={player.profilePicture || player.teams[0]?.logo || undefined}
                                   alt={player.name}
                                 />
                                 <AvatarFallback className="bg-primary text-white">
@@ -246,10 +246,10 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                           <TableCell>
                             {player.teams[0]?.name || "N/A"}
                           </TableCell>
-                          <TableCell>{player.city}</TableCell>
+                          <TableCell>{player.city || "N/A"}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
-                              {player.playingRole}
+                              {player.playingRole || "N/A"}
                             </Badge>
                           </TableCell>
                           <TableCell className="font-semibold">
@@ -259,7 +259,7 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                             {player.stats.wickets}
                           </TableCell>
                           <TableCell className="font-semibold">
-                            {player.stats.average.toFixed(2)}
+                            {(player.stats.average ?? 0).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))

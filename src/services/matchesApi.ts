@@ -1,6 +1,5 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData, type V2Envelope, type V2Pagination } from './api'
 
-// Types
 export interface Match {
   id: string
   title: string
@@ -71,7 +70,7 @@ export interface TeamScorecard {
   overs: string
   penalty: string | null
   totalOvers: number
-  fallOfWickets: any[]
+  fallOfWickets: unknown[]
   battingStats: BattingStat[]
   bowlingStats: BowlingStat[]
 }
@@ -134,46 +133,165 @@ export interface MatchDetail {
   summary: Summary
 }
 
-// Matches API functions
+function emptyPlayerOfMatch(): PlayerOfTheMatch {
+  return {
+    playerName: 'N/A',
+    teamName: '',
+    playerImage: null,
+    battingStats: { runs: 0, balls: 0, fours: 0, sixes: 0, isNotOut: false },
+    bowlingStats: { overs: '0.0', maidens: 0, runs: 0, wickets: 0 },
+  }
+}
+
 export const matchesApi = {
-  /**
-   * Get all matches with filters and pagination
-   */
   getMatches: async (params: MatchesParams = {}): Promise<MatchesResponse> => {
     try {
       const queryParams = new URLSearchParams()
-      
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.team_name) queryParams.append('team_name', params.team_name)
       if (params.status) queryParams.append('status', params.status)
 
-      const response = await api.get<MatchesResponse>(
-        `/admin/teamMatches?${queryParams.toString()}`
-      )
-      return response.data
-    } catch (error) {
-      throw new Error(handleApiError(error));
-    }
-  },
+      const response = await api.get<
+        V2Envelope<
+          Array<{
+            id: string
+            title?: string
+            matchType?: string
+            tournamentName?: string | null
+            date?: string
+            location?: string | null
+            groundName?: string | null
+            status?: string
+            result?: string | null
+            teamAName?: string | null
+            teamBName?: string | null
+          }>
+        >
+      >(`/admin/teamMatches?${queryParams.toString()}`)
 
-  /**
-   * Get match details by ID
-   */
-  getMatchById: async (matchId: string): Promise<MatchDetail> => {
-    try {
-      const response = await api.get<MatchDetail>(
-        `/admin/matchDetails/${matchId}`
-      )
-      return response.data
+      const rows = Array.isArray(response.data.data) ? response.data.data : []
+      const pagination = response.data.pagination as V2Pagination | undefined
+
+      return {
+        results: rows.map((m) => ({
+          id: m.id,
+          title:
+            m.title ||
+            `${m.teamAName || 'Team A'} vs ${m.teamBName || 'Team B'}`,
+          matchType: m.matchType || 'friendly',
+          tournamentName: m.tournamentName ?? null,
+          date: m.date || new Date().toISOString(),
+          location: m.location || '',
+          groundName: m.groundName || m.location || '',
+          status: m.status || 'scheduled',
+          result: m.result ?? null,
+        })),
+        page: pagination?.page ?? params.page ?? 1,
+        limit: pagination?.limit ?? params.limit ?? 20,
+        totalResults: pagination?.total ?? rows.length,
+        totalPages: pagination?.totalPages ?? 1,
+      }
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Delete match by ID
-   */
+  getMatchById: async (matchId: string): Promise<MatchDetail> => {
+    try {
+      const response = await api.get<
+        V2Envelope<{
+          id?: string
+          title?: string
+          status?: string
+          startDatetime?: string
+          endDatetime?: string
+          resultText?: string | null
+          teamA?: { team?: { name?: string; logo?: string | null } }
+          teamB?: { team?: { name?: string; logo?: string | null } }
+          config?: { location?: string; overs?: number }
+          innings?: Array<Record<string, unknown>>
+        }>
+      >(`/admin/matchDetails/${matchId}`)
+
+      const match = unwrapData(response)
+      const teamAName = match.teamA?.team?.name || 'Team A'
+      const teamBName = match.teamB?.team?.name || 'Team B'
+      const teamALogo = match.teamA?.team?.logo ?? null
+      const teamBLogo = match.teamB?.team?.logo ?? null
+      const start = match.startDatetime || new Date().toISOString()
+      const end = match.endDatetime || start
+      const status = match.status || 'scheduled'
+      const title = match.title || `${teamAName} vs ${teamBName}`
+      const location = match.config?.location || ''
+
+      const scorecardMatch: ScorecardMatch = {
+        id: String(match.id || matchId),
+        title,
+        status,
+        startdatetime: start,
+        endDateTime: end,
+      }
+
+      const teams: TeamScorecard[] = [
+        {
+          teamName: teamAName,
+          teamLogo: teamALogo,
+          runs: 0,
+          wickets: 0,
+          overs: '0.0',
+          penalty: null,
+          totalOvers: Number(match.config?.overs || 0),
+          fallOfWickets: [],
+          battingStats: [],
+          bowlingStats: [],
+        },
+        {
+          teamName: teamBName,
+          teamLogo: teamBLogo,
+          runs: 0,
+          wickets: 0,
+          overs: '0.0',
+          penalty: null,
+          totalOvers: Number(match.config?.overs || 0),
+          fallOfWickets: [],
+          battingStats: [],
+          bowlingStats: [],
+        },
+      ]
+
+      const teamScores: TeamScore[] = teams.map((t) => ({
+        teamName: t.teamName,
+        teamLogo: t.teamLogo,
+        score: t.runs,
+        wickets: t.wickets,
+        overs: t.overs,
+      }))
+
+      return {
+        matchTitle: title,
+        teamALogo,
+        teamBLogo,
+        status,
+        result: match.resultText ?? null,
+        tournamentName: null,
+        startDate: start,
+        startTime: start,
+        location,
+        ground: location,
+        scorecard: { match: scorecardMatch, teams },
+        summary: {
+          match: scorecardMatch,
+          teamScores,
+          result: match.resultText || '',
+          playerOfTheMatch: emptyPlayerOfMatch(),
+        },
+      }
+    } catch (error) {
+      throw new Error(handleApiError(error))
+    }
+  },
+
   deleteMatch: async (matchId: string): Promise<void> => {
     try {
       await api.delete(`/admin/matches/${matchId}`)
@@ -182,4 +300,3 @@ export const matchesApi = {
     }
   },
 }
-

@@ -11,10 +11,11 @@ import { Button } from '../ui/button'
 interface ConfirmDeleteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   title?: string
   description?: string
   itemName?: string
+  isLoading?: boolean
 }
 
 export function ConfirmDeleteDialog({
@@ -24,14 +25,20 @@ export function ConfirmDeleteDialog({
   title = 'Are you sure?',
   description,
   itemName,
+  isLoading = false,
 }: ConfirmDeleteDialogProps) {
   const handleConfirm = () => {
-    onConfirm()
-    onOpenChange(false)
+    void onConfirm()
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (isLoading) return
+        onOpenChange(next)
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -41,15 +48,22 @@ export function ConfirmDeleteDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleConfirm}>
-            Delete
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

@@ -1,36 +1,62 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData, type V2Envelope } from './api'
 
+export type AdPlatform = 'android' | 'ios'
+
+export interface PlatformAdConfig {
+  status: string
+  [key: string]: unknown
+}
+
+export type AdsStatusMap = Partial<Record<AdPlatform | string, PlatformAdConfig>>
+
+/** UI-friendly flags derived from platform status map */
 export interface AdsStatusResponse {
   showAndroidAds: boolean
   showIOSAds: boolean
+  raw: AdsStatusMap
 }
 
-/** Partial payload: send one or both flags, or {} for no change */
 export interface UpdateAdsStatusPayload {
   showAndroidAds?: boolean
   showIOSAds?: boolean
 }
 
+function isActive(status?: string): boolean {
+  return String(status || '').toLowerCase() === 'active'
+}
+
+function mapToFlags(raw: AdsStatusMap): AdsStatusResponse {
+  return {
+    showAndroidAds: isActive(raw.android?.status),
+    showIOSAds: isActive(raw.ios?.status),
+    raw,
+  }
+}
+
 export const adsApi = {
-  /**
-   * Get ads status for iOS and Android
-   */
   getAdsStatus: async (): Promise<AdsStatusResponse> => {
     try {
-      const response = await api.get<AdsStatusResponse>('/admin/ads/status')
-      return response.data
+      const response = await api.get<V2Envelope<AdsStatusMap>>('/admin/ads/status')
+      const raw = unwrapData(response) || {}
+      return mapToFlags(raw)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Update ads status. Send one flag, both, or {} for no change.
-   */
   updateAdsStatus: async (payload: UpdateAdsStatusPayload): Promise<AdsStatusResponse> => {
     try {
-      const response = await api.post<AdsStatusResponse>('/admin/ads/status', payload)
-      return response.data
+      if (payload.showAndroidAds !== undefined) {
+        await api.patch<V2Envelope<unknown>>('/admin/ad-config/android', {
+          status: payload.showAndroidAds ? 'active' : 'inactive',
+        })
+      }
+      if (payload.showIOSAds !== undefined) {
+        await api.patch<V2Envelope<unknown>>('/admin/ad-config/ios', {
+          status: payload.showIOSAds ? 'active' : 'inactive',
+        })
+      }
+      return adsApi.getAdsStatus()
     } catch (error) {
       throw new Error(handleApiError(error))
     }

@@ -15,6 +15,8 @@ import { Notifications } from '../pages/notifications/Notifications'
 import { AddManager } from '../pages/add-manager/AddManager'
 import { Settings } from '../pages/settings/Settings'
 import { Profile } from '../pages/profile/Profile'
+import { ScoringErrorReportsList } from '../pages/scoring-error-reports/ScoringErrorReportsList'
+import { ScoringErrorReportDetail } from '../pages/scoring-error-reports/ScoringErrorReportDetail'
 import { ProtectedRoute } from './ProtectedRoute'
 
 export const router = createBrowserRouter([
@@ -77,6 +79,14 @@ export const router = createBrowserRouter([
       {
         path: 'notifications',
         element: <Notifications />,
+      },
+      {
+        path: 'scoring-error-reports',
+        element: <ScoringErrorReportsList />,
+      },
+      {
+        path: 'scoring-error-reports/:id',
+        element: <ScoringErrorReportDetail />,
       },
       {
         path: 'add-manager',

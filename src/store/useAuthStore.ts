@@ -13,6 +13,9 @@ export interface User {
   provider?: string
   status?: string
   fcmToken?: string | null
+  /** V2 field */
+  profilePicture?: string | null
+  /** UI alias kept for existing components */
   profilePhoto?: string | null
 }
 
@@ -35,6 +38,15 @@ interface AuthState {
   checkTokenValidity: () => boolean
 }
 
+function normalizeUser(user: User): User {
+  const picture = user.profilePicture ?? user.profilePhoto ?? null
+  return {
+    ...user,
+    profilePicture: picture,
+    profilePhoto: picture,
+  }
+}
+
 const loadAuthFromStorage = (): Partial<AuthState> => {
   try {
     const stored = localStorage.getItem('auth-storage')
@@ -42,30 +54,40 @@ const loadAuthFromStorage = (): Partial<AuthState> => {
       const parsed = JSON.parse(stored)
       const token = parsed.token || null
       const tokenExpiry = parsed.tokenExpiry || null
-      
-      // Check if token is expired
+
       if (token && tokenExpiry) {
         const expiryDate = new Date(tokenExpiry)
         const now = new Date()
         if (expiryDate <= now) {
-          // Token expired, clear storage
           localStorage.removeItem('auth-storage')
-          return { user: null, token: null, refreshToken: null, tokenExpiry: null, isAuthenticated: false }
+          return {
+            user: null,
+            token: null,
+            refreshToken: null,
+            tokenExpiry: null,
+            isAuthenticated: false,
+          }
         }
       }
-      
+
       return {
-        user: parsed.user || null,
-        token: token,
+        user: parsed.user ? normalizeUser(parsed.user) : null,
+        token,
         refreshToken: parsed.refreshToken || null,
-        tokenExpiry: tokenExpiry,
+        tokenExpiry,
         isAuthenticated: !!(token && parsed.user),
       }
     }
   } catch {
     // Ignore
   }
-  return { user: null, token: null, refreshToken: null, tokenExpiry: null, isAuthenticated: false }
+  return {
+    user: null,
+    token: null,
+    refreshToken: null,
+    tokenExpiry: null,
+    isAuthenticated: false,
+  }
 }
 
 const saveAuthToStorage = (state: Partial<AuthState>) => {
@@ -78,7 +100,7 @@ const saveAuthToStorage = (state: Partial<AuthState>) => {
 
 export const useAuthStore = create<AuthState>((set, get) => {
   const initialState = loadAuthFromStorage()
-  
+
   return {
     ...initialState,
     user: initialState.user || null,
@@ -86,10 +108,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
     refreshToken: initialState.refreshToken || null,
     tokenExpiry: initialState.tokenExpiry || null,
     isAuthenticated: initialState.isAuthenticated || false,
-    
+
     setAuthData: (data: AuthData) => {
       const newState = {
-        user: data.user,
+        user: normalizeUser(data.user),
         token: data.token,
         refreshToken: data.refreshToken || null,
         tokenExpiry: data.tokenExpiry || null,
@@ -98,11 +120,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
       saveAuthToStorage(newState)
       set(newState)
     },
-    
+
     updateUser: (updates: Partial<User>) => {
       const state = get()
       if (state.user) {
-        const updatedUser = { ...state.user, ...updates }
+        const updatedUser = normalizeUser({ ...state.user, ...updates })
         const newState = {
           ...state,
           user: updatedUser,
@@ -111,7 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set(newState)
       }
     },
-    
+
     logout: () => {
       const newState = {
         user: null,
@@ -123,24 +145,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
       localStorage.removeItem('auth-storage')
       set(newState)
     },
-    
+
     checkTokenValidity: () => {
       const state = get()
       if (!state.token || !state.tokenExpiry) {
         return false
       }
-      
+
       const expiryDate = new Date(state.tokenExpiry)
       const now = new Date()
       const isValid = expiryDate > now
-      
+
       if (!isValid) {
-        // Token expired, logout
         get().logout()
       }
-      
+
       return isValid
     },
   }
 })
-
