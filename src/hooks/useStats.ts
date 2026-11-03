@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { statsApi } from '../services/statsApi'
+import { statsApi, type StatsParams } from '../services/statsApi'
+import { dashboardApi, type TopRunsAndWicketsParams } from '../services/dashboardApi'
 
 /**
  * Custom hook for stats data
  */
-export function useStats() {
+export function useStats(params: StatsParams = {}) {
   const statsQuery = useQuery({
-    queryKey: ['stats'],
-    queryFn: () => statsApi.getStats(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    queryKey: ['stats', params.ballType || 'leather'],
+    queryFn: () => statsApi.getStats(params),
+    staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
   })
 
@@ -21,3 +22,30 @@ export function useStats() {
   }
 }
 
+export function useStatsLeaderboards(params: TopRunsAndWicketsParams = {}) {
+  const query = useQuery({
+    queryKey: [
+      'stats',
+      'leaderboards',
+      params.ballType || 'leather',
+      params.runScorers || 10,
+      params.wicketTakers || 10,
+    ],
+    queryFn: () =>
+      dashboardApi.getTopRunsAndWickets({
+        runScorers: params.runScorers ?? 10,
+        wicketTakers: params.wicketTakers ?? 10,
+        ballType: params.ballType,
+      }),
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
+  return {
+    leaderboards: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  }
+}

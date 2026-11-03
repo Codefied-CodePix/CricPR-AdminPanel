@@ -280,7 +280,7 @@ export function TournamentDetail() {
                               .filter((team) => team.teamId) // Filter out teams with null teamId
                               .sort((a, b) => a.position - b.position)
                               .map((team) => (
-                                <TableRow key={`${stage._id}-${group._id}-${team.id}`} className="hover:bg-primary/5 transition-colors">
+                                <TableRow key={`${stage.id}-${group.id}-${team.id}`} className="hover:bg-primary/5 transition-colors">
                                   <TableCell>
                                     <div className="flex items-center gap-2">
                                       {team.position === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}
@@ -320,7 +320,7 @@ export function TournamentDetail() {
                             .filter((team) => team.teamId) // Filter out teams with null teamId
                             .sort((a, b) => a.position - b.position)
                             .map((team) => (
-                              <TableRow key={`${stage._id}-${team.id}`} className="hover:bg-primary/5 transition-colors">
+                              <TableRow key={`${stage.id}-${team.id}`} className="hover:bg-primary/5 transition-colors">
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     {team.position === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}

@@ -1,57 +1,39 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData, type V2Envelope } from './api'
+import type { BallType } from './dashboardApi'
 
-// Types
-export interface TopRunScorer {
-  runs: number
-  matches: number
-  name: string
-  average: number
-}
-
-export interface TopWicketTaker {
-  wickets: number
-  matches: number
-  name: string
-  average: number
-}
-
-export interface BestBattingAverage {
-  matches: number
-  name: string
+export interface BallTypeStats {
   totalRuns: number
-  average: number
-}
-
-export interface BestBowlingAverage {
-  wickets: number
-  matches: number
-  name: string
-  average: number
+  totalWickets: number
+  totalFours: number
+  totalSixes: number
 }
 
 export interface StatsResponse {
-  totalSixes: number
+  ballType: BallType
+  completedMatches: number
+  statsByBallType: Record<string, BallTypeStats>
+  totalRuns: number
+  totalWickets: number
   totalFours: number
-  totalExtras: number
-  highestTeamTotal: string
-  topRunScorers: TopRunScorer[]
-  topWicketTakers: TopWicketTaker[]
-  bestBattingAverages: BestBattingAverage[]
-  bestBowlingAverages: BestBowlingAverage[]
+  totalSixes: number
 }
 
-// Stats API functions
+export interface StatsParams {
+  ballType?: BallType
+}
+
 export const statsApi = {
-  /**
-   * Get statistics data
-   */
-  getStats: async (): Promise<StatsResponse> => {
+  getStats: async (params: StatsParams = {}): Promise<StatsResponse> => {
     try {
-      const response = await api.get<StatsResponse>('/admin/stats')
-      return response.data
+      const queryParams = new URLSearchParams()
+      if (params.ballType) queryParams.append('ballType', params.ballType)
+      const qs = queryParams.toString()
+      const response = await api.get<V2Envelope<StatsResponse>>(
+        `/admin/stats${qs ? `?${qs}` : ''}`
+      )
+      return unwrapData(response)
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 }
-

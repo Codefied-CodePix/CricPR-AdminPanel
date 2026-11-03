@@ -36,6 +36,7 @@ export function TournamentsList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const limit = 10
 
   // Reset to page 1 when filters change
@@ -68,8 +69,9 @@ export function TournamentsList() {
   }
 
   const confirmDelete = async () => {
-    if (!selectedTournament) return
+    if (!selectedTournament || isDeleting) return
 
+    setIsDeleting(true)
     try {
       await tournamentsApi.deleteTournament(selectedTournament.tournamentId)
       addToast({
@@ -79,7 +81,6 @@ export function TournamentsList() {
       })
       setSelectedTournament(null)
       setDeleteDialogOpen(false)
-      // Refetch data after delete
       refetch()
     } catch (error) {
       addToast({
@@ -87,6 +88,8 @@ export function TournamentsList() {
         description: error instanceof Error ? error.message : 'Failed to delete tournament',
         variant: 'destructive',
       })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -216,6 +219,7 @@ export function TournamentsList() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(tournament)}
+                            disabled={isDeleting}
                           >
                             <Trash2 className="h-4 w-4 text-red" />
                           </Button>
@@ -296,6 +300,7 @@ export function TournamentsList() {
         onOpenChange={setDeleteDialogOpen}
         onConfirm={confirmDelete}
         itemName={selectedTournament?.name}
+        isLoading={isDeleting}
       />
     </div>
   )
