@@ -1,8 +1,26 @@
 import { useMutation } from '@tanstack/react-query'
 import { authApi } from '../services/authApi'
-import type { LoginRequest, LoginResponse } from '../services/authApi'
+import type { LoginRequest, LoginResponse, User as ApiUser } from '../services/authApi'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNavigate } from 'react-router-dom'
+
+function mapApiUser(user: ApiUser) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.roles?.[0]?.name || 'admin',
+    roles: user.roles,
+    gender: user.gender,
+    isEmailVerified: user.isEmailVerified,
+    isPhoneVerified: user.isPhoneVerified,
+    provider: user.provider,
+    status: user.status,
+    fcmToken: user.fcmToken,
+    profilePicture: user.profilePicture ?? null,
+    profilePhoto: user.profilePicture ?? null,
+  }
+}
 
 /**
  * Custom hook for authentication operations
@@ -11,26 +29,11 @@ export function useAuth() {
   const navigate = useNavigate()
   const { setAuthData, logout: storeLogout } = useAuthStore()
 
-  // Login mutation
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginRequest) => authApi.login(credentials),
     onSuccess: (data: LoginResponse) => {
-      // Store auth data in Zustand store
       setAuthData({
-        user: {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-          role: data.user.roles[0]?.name || 'admin',
-          roles: data.user.roles,
-          gender: data.user.gender,
-          isEmailVerified: data.user.isEmailVerified,
-          isPhoneVerified: data.user.isPhoneVerified,
-          provider: data.user.provider,
-          status: data.user.status,
-          fcmToken: data.user.fcmToken,
-          profilePhoto: data.user.profilePhoto,
-        },
+        user: mapApiUser(data.user),
         token: data.tokens.access.token,
         refreshToken: data.tokens.refresh.token,
         tokenExpiry: data.tokens.access.expires,
@@ -41,7 +44,6 @@ export function useAuth() {
     },
   })
 
-  // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: () => {
       const refreshToken = useAuthStore.getState().refreshToken
@@ -52,7 +54,6 @@ export function useAuth() {
       navigate('/login')
     },
     onError: () => {
-      // Even if logout fails on backend, logout on frontend
       storeLogout()
       navigate('/login')
     },
@@ -67,4 +68,3 @@ export function useAuth() {
     error: loginMutation.error,
   }
 }
-

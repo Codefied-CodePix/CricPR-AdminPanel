@@ -12,7 +12,11 @@ export function AddManager() {
   const handleIosChange = async (checked: boolean) => {
     try {
       await updateAdsStatus({ showIOSAds: checked })
-      addToast({ title: 'Updated', description: checked ? 'iOS ads are now shown.' : 'iOS ads are now hidden.', variant: 'default' })
+      addToast({
+        title: 'Updated',
+        description: checked ? 'iOS ads are now shown.' : 'iOS ads are now hidden.',
+        variant: 'default',
+      })
     } catch (e) {
       addToast({
         title: 'Update failed',
@@ -25,7 +29,11 @@ export function AddManager() {
   const handleAndroidChange = async (checked: boolean) => {
     try {
       await updateAdsStatus({ showAndroidAds: checked })
-      addToast({ title: 'Updated', description: checked ? 'Android ads are now shown.' : 'Android ads are now hidden.', variant: 'default' })
+      addToast({
+        title: 'Updated',
+        description: checked ? 'Android ads are now shown.' : 'Android ads are now hidden.',
+        variant: 'default',
+      })
     } catch (e) {
       addToast({
         title: 'Update failed',
@@ -39,8 +47,8 @@ export function AddManager() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Add Manager"
-          description="Add a manager for iOS and Android platforms"
+          title="Ads Config"
+          description="Toggle advertisement visibility for iOS and Android"
         />
         <Card>
           <CardContent className="flex items-center justify-center py-12">
@@ -55,8 +63,8 @@ export function AddManager() {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Add Manager"
-          description="Add a manager for iOS and Android platforms"
+          title="Ads Config"
+          description="Toggle advertisement visibility for iOS and Android"
         />
         <Card>
           <CardContent className="py-8 text-center text-destructive">
@@ -75,55 +83,51 @@ export function AddManager() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Add Manager"
-        description="Add a manager for iOS and Android platforms"
+        title="Ads Config"
+        description="Toggle advertisement visibility for iOS and Android"
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Platform toggles
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-borderShadcn/50 p-4">
-            <div className="flex items-center gap-3 flex-1">
-              <Apple className="h-6 w-6 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">iOS</span>
-                <span className="text-xs text-muted-foreground">
-                  {showIOSAds ? 'Ads shown on iOS' : 'Ads hidden on iOS'}
-                </span>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Apple className="h-5 w-5" />
+              iOS Ads
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {showIOSAds ? 'Ads are currently shown on iOS' : 'Ads are currently hidden on iOS'}
+            </p>
             <Switch
               checked={showIOSAds}
               onCheckedChange={handleIosChange}
-              aria-label="Toggle iOS ads"
               disabled={isUpdating}
             />
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-borderShadcn/50 p-4">
-            <div className="flex items-center gap-3 flex-1">
-              <Smartphone className="h-6 w-6 text-muted-foreground" />
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Android</span>
-                <span className="text-xs text-muted-foreground">
-                  {showAndroidAds ? 'Ads shown on Android' : 'Ads hidden on Android'}
-                </span>
-              </div>
-            </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Android Ads
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {showAndroidAds
+                ? 'Ads are currently shown on Android'
+                : 'Ads are currently hidden on Android'}
+            </p>
             <Switch
               checked={showAndroidAds}
               onCheckedChange={handleAndroidChange}
-              aria-label="Toggle Android ads"
               disabled={isUpdating}
             />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,5 @@
-import api, { handleApiError } from './api'
+import api, { handleApiError, unwrapData, type V2Envelope, type V2Pagination } from './api'
 
-// Types
 export interface Tournament {
   tournamentId: string
   name: string
@@ -23,6 +22,7 @@ export interface TournamentsParams {
   page?: number
   limit?: number
   sortBy?: string
+  name?: string
 }
 
 export interface TournamentMatchTeam {
@@ -43,7 +43,7 @@ export interface TournamentMatchResult {
 }
 
 export interface TournamentMatchConfig {
-  _id: string
+  id?: string
   overs: number
   matchType: string
   ballType: string
@@ -78,19 +78,19 @@ export interface TournamentMatch {
 }
 
 export interface TournamentStageGroupTeam {
-  _id: string
+  id?: string
   tournamentId: string
   stageId: string
   groupId: string
   teamId: {
-    _id: string
+    id?: string
     logo: string | null
     name: string
     location: string
     captain: string
   }
   tournamentTeamId: {
-    _id: string
+    id?: string
     tournamentId: string
     teamId: string
     registrationStatus: string
@@ -100,17 +100,17 @@ export interface TournamentStageGroupTeam {
 }
 
 export interface TournamentStageGroup {
-  _id: string
+  id?: string
   groupName: string
   groupOrder: number
   currentTeamsCount: number
   status: string
   teams: TournamentStageGroupTeam[]
-  matches: any[]
+  matches: unknown[]
 }
 
 export interface TournamentStage {
-  _id: string
+  id?: string
   tournamentId: string
   name: string
   stageOrder: number
@@ -166,7 +166,7 @@ export interface TournamentPointsTableTeam {
 }
 
 export interface TournamentPointsTableGroup {
-  _id: string
+  id?: string
   groupName: string
   groupOrder: number
   currentTeamsCount: number
@@ -175,7 +175,7 @@ export interface TournamentPointsTableGroup {
 }
 
 export interface TournamentPointsTableStage {
-  _id: string
+  id?: string
   name: string
   format: string
   status: string
@@ -189,7 +189,7 @@ export interface TournamentPointsTableStage {
 
 export interface TournamentPointsTable {
   tournament: {
-    _id: string
+    id?: string
     name: string
     format: string
     status: string
@@ -212,45 +212,118 @@ export interface TournamentDetail {
   pointsTable: TournamentPointsTable
 }
 
-// Tournaments API functions
+function mapTournament(row: Record<string, unknown>): Tournament {
+  return {
+    tournamentId: String(row.id || ''),
+    name: String(row.name || 'Unknown'),
+    startDate: String(row.startDate || new Date().toISOString()),
+    endDate: String(row.endDate || row.startDate || new Date().toISOString()),
+    status: String(row.status || 'upcoming'),
+    totalMatches: Number(row.totalMatches || 0),
+    totalTeams: Number(row.totalTeams || (Array.isArray(row.teams) ? row.teams.length : 0)),
+  }
+}
+
 export const tournamentsApi = {
-  /**
-   * Get all tournaments with filters and pagination
-   */
   getTournaments: async (params: TournamentsParams = {}): Promise<TournamentsResponse> => {
     try {
       const queryParams = new URLSearchParams()
-      
       if (params.page) queryParams.append('page', params.page.toString())
       if (params.limit) queryParams.append('limit', params.limit.toString())
       if (params.sortBy) queryParams.append('sortBy', params.sortBy)
+      if (params.name) queryParams.append('name', params.name)
 
-      const response = await api.get<TournamentsResponse>(
+      const response = await api.get<V2Envelope<Record<string, unknown>[]>>(
         `/admin/tournaments?${queryParams.toString()}`
       )
-      return response.data
+      const rows = Array.isArray(response.data.data) ? response.data.data : []
+      const pagination = response.data.pagination as V2Pagination | undefined
+      return {
+        results: rows.map(mapTournament),
+        page: pagination?.page ?? params.page ?? 1,
+        limit: pagination?.limit ?? params.limit ?? 20,
+        totalResults: pagination?.total ?? rows.length,
+        totalPages: pagination?.totalPages ?? 1,
+      }
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Get tournament details by ID
-   */
   getTournamentById: async (tournamentId: string): Promise<TournamentDetail> => {
     try {
-      const response = await api.get<TournamentDetail>(
-        `/admin/tournaments/${tournamentId}`
-      )
-      return response.data
+      const response = await api.get<
+        V2Envelope<{
+          id?: string
+          name?: string
+          startDate?: string
+          endDate?: string
+          status?: string
+          logo?: string | null
+          banner?: string | null
+          teams?: unknown[]
+          stages?: Array<Record<string, unknown>>
+        }>
+      >(`/admin/tournaments/${tournamentId}`)
+
+      const t = unwrapData(response)
+      const stagesRaw = t.stages || []
+      const stages: TournamentStage[] = stagesRaw.map((s, idx) => ({
+        id: String(s.id || ''),
+        tournamentId: String(t.id || tournamentId),
+        name: String(s.name || `Stage ${idx + 1}`),
+        stageOrder: Number(s.stageOrder || idx + 1),
+        format: String(s.format || ''),
+        status: String(s.status || ''),
+        hasGroups: Boolean(s.hasGroups),
+        numberOfGroups: Number(s.numberOfGroups || 0),
+        groups: [],
+      }))
+
+      return {
+        tournamentId: String(t.id || tournamentId),
+        tournamentName: String(t.name || 'Unknown'),
+        startDate: String(t.startDate || new Date().toISOString()),
+        endDate: String(t.endDate || t.startDate || new Date().toISOString()),
+        status: String(t.status || 'upcoming'),
+        tournamentLogo: t.logo ?? null,
+        tournamentBanner: t.banner ?? null,
+        totalMatches: 0,
+        totalTeams: Array.isArray(t.teams) ? t.teams.length : 0,
+        matchesPlayed: [],
+        matchesFixtures: {
+          results: stages,
+          page: 1,
+          limit: stages.length || 1,
+          totalPages: 1,
+          totalResults: stages.length,
+        },
+        pointsTable: {
+          tournament: {
+            id: String(t.id || tournamentId),
+            name: String(t.name || 'Unknown'),
+            format: '',
+            status: String(t.status || ''),
+          },
+          stages: stages.map((s) => ({
+            id: s.id,
+            name: s.name,
+            format: s.format,
+            status: s.status,
+            hasGroups: s.hasGroups,
+            pointsForWin: 2,
+            pointsForDraw: 1,
+            pointsForLoss: 0,
+            groups: [],
+            pointsTable: [],
+          })),
+        },
+      }
     } catch (error) {
       throw new Error(handleApiError(error))
     }
   },
 
-  /**
-   * Delete tournament by ID
-   */
   deleteTournament: async (tournamentId: string): Promise<void> => {
     try {
       await api.delete(`/admin/tournaments/${tournamentId}`)
@@ -259,4 +332,3 @@ export const tournamentsApi = {
     }
   },
 }
-

@@ -32,12 +32,12 @@ export function DashboardStats({ data, isLoading }: DashboardStatsProps) {
             {isLoading ? (
               <span className="text-muted-foreground">...</span>
             ) : (
-              data?.matches.total ?? 0
+              data?.totalMatches ?? 0
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {data?.matches.percentChangeSinceLastMonth !== undefined
-              ? `${data.matches.percentChangeSinceLastMonth >= 0 ? '+' : ''}${data.matches.percentChangeSinceLastMonth}% from last month`
+            {data?.matchesMonthChangePct !== undefined
+              ? `${data.matchesMonthChangePct >= 0 ? '+' : ''}${data.matchesMonthChangePct}% from last month`
               : 'Loading...'}
           </p>
         </CardContent>
@@ -60,12 +60,12 @@ export function DashboardStats({ data, isLoading }: DashboardStatsProps) {
             {isLoading ? (
               <span className="text-muted-foreground">...</span>
             ) : (
-              data?.tournaments.total ?? 0
+              data?.totalTournaments ?? 0
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {data?.tournaments.active !== undefined
-              ? `${data.tournaments.active} active tournaments`
+            {data?.activeTournaments !== undefined
+              ? `${data.activeTournaments} active tournaments`
               : 'Loading...'}
           </p>
         </CardContent>
@@ -88,7 +88,7 @@ export function DashboardStats({ data, isLoading }: DashboardStatsProps) {
             {isLoading ? (
               <span className="text-muted-foreground">...</span>
             ) : (
-              data?.teams.total ?? 0
+              data?.totalTeams ?? 0
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">Registered teams</p>
@@ -99,8 +99,8 @@ export function DashboardStats({ data, isLoading }: DashboardStatsProps) {
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16"></div>
         <CardHeader className="pb-2 relative">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <Users className="h-5 w-5 text-green-500" />
+            <div className="p-2 rounded-lg bg-purple-500/10">
+              <Users className="h-5 w-5 text-purple-500" />
             </div>
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Players
@@ -108,21 +108,20 @@ export function DashboardStats({ data, isLoading }: DashboardStatsProps) {
           </div>
         </CardHeader>
         <CardContent className="relative">
-          <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+          <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
             {isLoading ? (
               <span className="text-muted-foreground">...</span>
             ) : (
-              data?.players.total ?? 0
+              data?.totalPlayers ?? 0
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {data?.players.signupsLast30Days !== undefined
-              ? `${data.players.signupsLast30Days} signups last 30 days`
-              : 'Active players'}
+            {data?.playersLast30Days !== undefined
+              ? `${data.playersLast30Days} signups last 30 days`
+              : 'Loading...'}
           </p>
         </CardContent>
       </Card>
     </div>
   );
 }
-

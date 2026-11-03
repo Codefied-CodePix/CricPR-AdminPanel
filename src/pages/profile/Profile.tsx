@@ -2,10 +2,9 @@ import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { User, Lock, Save, Eye, EyeOff, Pencil, X } from 'lucide-react'
+import { User, Save, Pencil, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
 import { Badge } from '../../components/ui/badge'
@@ -24,33 +23,13 @@ const nameSchema = z.object({
   name: z.string().min(1, 'Name is required'),
 })
 
-const currentPasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-})
-
-const newPasswordSchema = z.object({
-  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-})
-
 type NameFormData = z.infer<typeof nameSchema>
-type CurrentPasswordFormData = z.infer<typeof currentPasswordSchema>
-type NewPasswordFormData = z.infer<typeof newPasswordSchema>
 
 export function Profile() {
   const { user, updateUser } = useAuthStore()
   const { addToast } = useToast()
   const [isLoadingName, setIsLoadingName] = useState(false)
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false)
-  const [isLoadingPassword, setIsLoadingPassword] = useState(false)
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false)
-  const [isCurrentPasswordVerified, setIsCurrentPasswordVerified] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
   const [isEditingPhoto, setIsEditingPhoto] = useState(false)
   const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null)
@@ -69,33 +48,15 @@ export function Profile() {
     },
   })
 
-  const {
-    register: registerCurrentPassword,
-    handleSubmit: handleSubmitCurrentPassword,
-    formState: { errors: currentPasswordErrors },
-    reset: resetCurrentPassword,
-  } = useForm<CurrentPasswordFormData>({
-    resolver: zodResolver(currentPasswordSchema),
-  })
-
-  const {
-    register: registerNewPassword,
-    handleSubmit: handleSubmitNewPassword,
-    formState: { errors: newPasswordErrors },
-    reset: resetNewPassword,
-  } = useForm<NewPasswordFormData>({
-    resolver: zodResolver(newPasswordSchema),
-  })
-
-  // Fallback avatar image
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&background=0E795D&color=fff&size=256`
-  const displayPhoto = photoPreview || user?.profilePhoto || fallbackAvatar
+  const displayPhoto =
+    photoPreview || user?.profilePicture || user?.profilePhoto || fallbackAvatar
 
   const handleNameSubmit = async (data: NameFormData) => {
     setIsLoadingName(true)
     try {
-      await authApi.editName(data.name)
-      updateUser({ name: data.name })
+      const updated = await authApi.editName(data.name)
+      updateUser({ name: updated.name || data.name })
       addToast({
         title: 'Success',
         description: 'Name updated successfully',
@@ -116,7 +77,6 @@ export function Profile() {
   const handlePhotoFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         addToast({
           title: 'Error',
@@ -125,7 +85,6 @@ export function Profile() {
         })
         return
       }
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         addToast({
           title: 'Error',
@@ -135,7 +94,6 @@ export function Profile() {
         return
       }
       setSelectedPhotoFile(file)
-      // Create preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string)
@@ -157,13 +115,19 @@ export function Profile() {
 
     setIsLoadingPhoto(true)
     try {
-      // Send file directly as FormData
-      await authApi.editProfilePhoto(selectedPhotoFile)
-      
-      // Update preview URL for display
-      const previewUrl = photoPreview || URL.createObjectURL(selectedPhotoFile)
-      updateUser({ profilePhoto: previewUrl })
-      
+      const uploaded = await authApi.editProfilePhoto(selectedPhotoFile)
+      const url = uploaded.url || photoPreview
+      if (url && uploaded.url) {
+        try {
+          await authApi.setProfilePictureUrl(uploaded.url)
+        } catch {
+          // Upload with type=profilePicture already persists on the server
+        }
+      }
+      if (url) {
+        updateUser({ profilePicture: url, profilePhoto: url })
+      }
+
       addToast({
         title: 'Success',
         description: 'Profile photo updated successfully',
@@ -195,71 +159,6 @@ export function Profile() {
     }
   }
 
-  const handleCurrentPasswordSubmit = async (data: CurrentPasswordFormData) => {
-    setIsVerifyingPassword(true)
-    try {
-      // Verify the current password
-      const verification = await authApi.verifyPassword(data.currentPassword)
-      
-      if (!verification.success) {
-        addToast({
-          title: 'Error',
-          description: verification.error || 'Current password is incorrect',
-          variant: 'destructive',
-        })
-        return
-      }
-
-      // If password is valid, show new password fields
-      setIsCurrentPasswordVerified(true)
-      addToast({
-        title: 'Success',
-        description: verification.message || 'Current password verified. Please enter your new password.',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to verify password',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsVerifyingPassword(false)
-    }
-  }
-
-  const handleNewPasswordSubmit = async (data: NewPasswordFormData) => {
-    setIsLoadingPassword(true)
-    try {
-      await authApi.changePassword(data.newPassword, data.confirmPassword)
-      
-      addToast({
-        title: 'Success',
-        description: 'Password changed successfully',
-        variant: 'success',
-      })
-      
-      // Reset everything
-      setIsCurrentPasswordVerified(false)
-      resetCurrentPassword()
-      resetNewPassword()
-    } catch (error) {
-      addToast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to change password',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsLoadingPassword(false)
-    }
-  }
-
-  const handleCancelPasswordChange = () => {
-    setIsCurrentPasswordVerified(false)
-    resetCurrentPassword()
-    resetNewPassword()
-  }
-
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -276,7 +175,6 @@ export function Profile() {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Profile Overview Card */}
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -286,7 +184,6 @@ export function Profile() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col items-center gap-4">
-              {/* Profile Photo with Edit Icon */}
               <div className="relative group cursor-pointer">
                 <button
                   type="button"
@@ -315,8 +212,7 @@ export function Profile() {
                   className="hidden"
                 />
               </div>
-              
-              {/* Name with Edit Icon */}
+
               <div className="text-center space-y-1 w-full">
                 <div className="flex items-center justify-center gap-2 group/name">
                   {isEditingName ? (
@@ -403,168 +299,27 @@ export function Profile() {
           </CardContent>
         </Card>
 
-        {/* Edit Forms */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Change Password */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lock className="h-5 w-5 text-primary" />
-                Change Password
-              </CardTitle>
+              <CardTitle>Account</CardTitle>
             </CardHeader>
-            <CardContent>
-              {!isCurrentPasswordVerified ? (
-                // Step 1: Verify Current Password
-                <form onSubmit={handleSubmitCurrentPassword(handleCurrentPasswordSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="currentPassword"
-                        type={showCurrentPassword ? 'text' : 'password'}
-                        {...registerCurrentPassword('currentPassword')}
-                        className="border-2 focus:border-primary pr-10"
-                        placeholder="Enter your current password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {currentPasswordErrors.currentPassword && (
-                      <p className="text-sm text-red">
-                        {currentPasswordErrors.currentPassword.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="submit"
-                      disabled={isVerifyingPassword}
-                      className="flex-1"
-                    >
-                      {isVerifyingPassword ? (
-                        <>
-                          <Lock className="mr-2 h-4 w-4 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="mr-2 h-4 w-4" />
-                          Verify Password
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              ) : (
-                // Step 2: Enter New Password
-                <form onSubmit={handleSubmitNewPassword(handleNewPasswordSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="newPassword"
-                        type={showNewPassword ? 'text' : 'password'}
-                        {...registerNewPassword('newPassword')}
-                        className="border-2 focus:border-primary pr-10"
-                        placeholder="Enter your new password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {newPasswordErrors.newPassword && (
-                      <p className="text-sm text-red">
-                        {newPasswordErrors.newPassword.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        {...registerNewPassword('confirmPassword')}
-                        className="border-2 focus:border-primary pr-10"
-                        placeholder="Confirm your new password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {newPasswordErrors.confirmPassword && (
-                      <p className="text-sm text-red">
-                        {newPasswordErrors.confirmPassword.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="submit"
-                      disabled={isLoadingPassword}
-                      className="flex-1"
-                    >
-                      {isLoadingPassword ? (
-                        <>
-                          <Lock className="mr-2 h-4 w-4 animate-spin" />
-                          Changing...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          Change Password
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancelPasswordChange}
-                      disabled={isLoadingPassword}
-                    >
-                      <X className="mr-2 h-4 w-4" />
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              )}
+            <CardContent className="text-sm text-muted-foreground">
+              Password changes are managed via seeded admin credentials on the V2 API
+              and are not available in this panel.
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Photo Edit Dialog */}
-      <Dialog open={isEditingPhoto} onOpenChange={(open) => {
-        if (!open) {
-          handleCancelPhotoEdit()
-        }
-      }}>
+      <Dialog
+        open={isEditingPhoto}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancelPhotoEdit()
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Profile Photo</DialogTitle>
@@ -611,11 +366,7 @@ export function Profile() {
                 <p className="text-sm text-muted-foreground text-center">
                   No file selected. Please select an image file.
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelPhotoEdit}
-                >
+                <Button type="button" variant="outline" onClick={handleCancelPhotoEdit}>
                   Close
                 </Button>
               </div>
@@ -626,4 +377,3 @@ export function Profile() {
     </div>
   )
 }
-
