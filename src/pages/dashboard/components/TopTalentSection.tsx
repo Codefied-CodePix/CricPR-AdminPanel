@@ -20,11 +20,7 @@ import { Input } from "../../../components/ui/input";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "../../../components/ui/avatar";
+import { PlayerAvatar } from "../../../components/common/PlayerAvatar";
 import { useTopTalent } from "../../../hooks/useDashboard";
 import { ROLE_MAPPING } from "../constants";
 import type { TopTalentPlayer } from "../../../services/dashboardApi";
@@ -227,19 +223,11 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage
-                                  src={player.profilePicture || player.teams[0]?.logo || undefined}
-                                  alt={player.name}
-                                />
-                                <AvatarFallback className="bg-primary text-white">
-                                  {player.name
-                                    .split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")
-                                    .toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
+                              <PlayerAvatar
+                                className="h-10 w-10"
+                                src={player.profilePicture}
+                                name={player.name}
+                              />
                               <span className="font-medium">{player.name}</span>
                             </div>
                           </TableCell>
