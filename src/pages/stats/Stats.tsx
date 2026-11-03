@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { PageHeader } from '../../components/common/PageHeader'
 import { TrendingUp, Target, Zap, Award, Trophy } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
+import { PlayerAvatar } from '../../components/common/PlayerAvatar'
 import { Select } from '../../components/ui/select'
 import { useStats, useStatsLeaderboards } from '../../hooks/useStats'
 import type { BallType } from '../../services/dashboardApi'
@@ -164,22 +164,16 @@ export function Stats() {
                   </TableRow>
                 ) : leaderboards?.runScorers?.length ? (
                   leaderboards.runScorers.map((player, idx) => {
-                    const playerImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=0E795D&color=fff&size=128`
                     return (
                       <TableRow key={player.playerId || player.name}>
                         <TableCell>{idx + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={playerImage} alt={player.name} />
-                              <AvatarFallback className="bg-primary text-white text-xs">
-                                {player.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <PlayerAvatar
+                              className="h-7 w-7"
+                              src={null}
+                              name={player.name}
+                            />
                             <span className="font-medium">{player.name}</span>
                           </div>
                         </TableCell>
@@ -226,22 +220,16 @@ export function Stats() {
                   </TableRow>
                 ) : leaderboards?.wicketTakers?.length ? (
                   leaderboards.wicketTakers.map((player, idx) => {
-                    const playerImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=0E795D&color=fff&size=128`
                     return (
                       <TableRow key={player.playerId || player.name}>
                         <TableCell>{idx + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={playerImage} alt={player.name} />
-                              <AvatarFallback className="bg-primary text-white text-xs">
-                                {player.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <PlayerAvatar
+                              className="h-7 w-7"
+                              src={null}
+                              name={player.name}
+                            />
                             <span className="font-medium">{player.name}</span>
                           </div>
                         </TableCell>

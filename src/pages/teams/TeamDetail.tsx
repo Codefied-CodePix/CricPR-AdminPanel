@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Badge } from '../../components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
+import { PlayerAvatar } from '../../components/common/PlayerAvatar'
 import { useTeam } from '../../hooks/useTeam'
 import { useTeams } from '../../hooks/useTeams'
 import { format } from 'date-fns'
@@ -368,8 +369,6 @@ export function TeamDetail() {
                   <TableBody>
                     {team.players && team.players.length > 0 ? (
                       team.players.map((player) => {
-                        const fallbackPlayerImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.playerName)}&background=0E795D&color=fff&size=128`
-                        const playerImage = player.playerProfilePic || fallbackPlayerImage
                         return (
                           <TableRow 
                             key={player.playerId} 
@@ -378,16 +377,11 @@ export function TeamDetail() {
                           >
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9">
-                                  <AvatarImage src={playerImage} alt={player.playerName} />
-                                  <AvatarFallback className="bg-primary text-white text-xs">
-                                    {player.playerName
-                                      .split(' ')
-                                      .map((n) => n[0])
-                                      .join('')
-                                      .toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <PlayerAvatar
+                                  className="h-9 w-9"
+                                  src={player.playerProfilePic}
+                                  name={player.playerName}
+                                />
                                 <span className="font-medium">{player.playerName}</span>
                               </div>
                             </TableCell>
@@ -441,18 +435,11 @@ export function TeamDetail() {
                 <p className="text-sm text-muted-foreground mt-2">Highest Individual Score</p>
                 {team.players && team.players.length > 0 && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-borderShadcn/30">
-                    <Avatar className="h-6 w-6">
-                      {team.players[0].playerProfilePic ? (
-                        <AvatarImage src={team.players[0].playerProfilePic} alt={team.players[0].playerName} />
-                      ) : null}
-                      <AvatarFallback className="bg-primary text-white text-xs">
-                        {team.players[0].playerName
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <PlayerAvatar
+                      className="h-6 w-6"
+                      src={team.players[0].playerProfilePic}
+                      name={team.players[0].playerName}
+                    />
                     <span className="text-sm font-medium">{team.players[0].playerName}</span>
                   </div>
                 )}
@@ -478,18 +465,11 @@ export function TeamDetail() {
                       const bestBowlingPlayer = team.players.find(p => p.bestBowling)
                       return bestBowlingPlayer ? (
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-borderShadcn/30">
-                          <Avatar className="h-6 w-6">
-                            {bestBowlingPlayer.playerProfilePic ? (
-                              <AvatarImage src={bestBowlingPlayer.playerProfilePic} alt={bestBowlingPlayer.playerName} />
-                            ) : null}
-                            <AvatarFallback className="bg-primary text-white text-xs">
-                              {bestBowlingPlayer.playerName
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')
-                                .toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <PlayerAvatar
+                            className="h-6 w-6"
+                            src={bestBowlingPlayer.playerProfilePic}
+                            name={bestBowlingPlayer.playerName}
+                          />
                           <span className="text-sm font-medium">{bestBowlingPlayer.playerName}</span>
                         </div>
                       ) : null

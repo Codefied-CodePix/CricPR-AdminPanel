@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { Badge } from '../../components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
+import { PlayerAvatar } from '../../components/common/PlayerAvatar'
 import { usePlayer } from '../../hooks/usePlayer'
 import { format } from 'date-fns'
 
@@ -13,9 +13,6 @@ export function PlayerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { playerData, isLoading, isError } = usePlayer(id)
-  
-  const fallbackAvatar = playerData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(playerData.name)}&background=0E795D&color=fff&size=256` : ''
-  const profileImage = playerData?.profileImage || fallbackAvatar
 
   if (isLoading) {
     return (
@@ -55,16 +52,12 @@ export function PlayerDetail() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djI2SDI0VjM0aDEyem0wLTI0djI2SDI0VjEwaDEyem0yNCAwaC0xMnYyNmgxMlYxMHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
         <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-6">
-            <Avatar className="h-32 w-32 border-4 border-white/30 shadow-xl ring-4 ring-white/20">
-              <AvatarImage src={profileImage} alt={player.name} />
-              <AvatarFallback className="bg-white/20 text-white text-3xl backdrop-blur-sm">
-                {player.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <PlayerAvatar
+              className="h-32 w-32 border-4 border-white/30 shadow-xl ring-4 ring-white/20"
+              src={player.profileImage}
+              name={player.name}
+              fallbackClassName="bg-white/20 text-white text-3xl backdrop-blur-sm"
+            />
             <div className="space-y-2">
               <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-lg">
                 {player.name}
