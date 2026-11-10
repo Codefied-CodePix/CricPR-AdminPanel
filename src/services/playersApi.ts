@@ -53,13 +53,14 @@ function mapPlayer(row: Record<string, unknown>): Player {
     playingRole: String(row.playingRole || ''),
     battingStyle: String(row.battingStyle || ''),
     bowlingStyle: String(row.bowlingStyle || ''),
-    isWicketKeeper: Boolean(row.isWicketKeeper),
-    matches: 0,
-    runs: 0,
-    wickets: 0,
-    strikeRate: 0,
-    average: 0,
-    economy: 0,
+    isWicketKeeper:
+      Boolean(row.isWicketKeeper) || /wicket/i.test(String(row.playingRole || '')),
+    matches: Number(row.matches ?? 0),
+    runs: Number(row.runs ?? 0),
+    wickets: Number(row.wickets ?? 0),
+    strikeRate: Number(row.strikeRate ?? 0),
+    average: Number(row.average ?? 0),
+    economy: Number(row.economy ?? 0),
     profilePicture: (user.profilePicture as string | null | undefined) ?? null,
   }
 }

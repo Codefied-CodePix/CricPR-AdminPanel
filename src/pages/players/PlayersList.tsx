@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import type { ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, /* Trash2, */ ChevronLeft, ChevronRight } from 'lucide-react'
+import { /* Trash2, */ ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/common/PageHeader'
 import { Badge } from '../../components/ui/badge'
@@ -13,38 +13,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Download } from 'lucide-react'
 import { exportTableToCSV } from '../../utils/csv'
 import { usePlayers } from '../../hooks/usePlayers'
+import { useCities } from '../../hooks/useCities'
 import { playersApi } from '../../services/playersApi'
 import type { Player } from '../../services/playersApi'
 
-// Filter options based on API requirements
+// Filter options use the values stored by the API (slugs, not display labels)
 const BATTING_STYLES = [
-  { value: 'Left-hand bat', label: 'Left-hand bat' },
-  { value: 'Right-hand bat', label: 'Right-hand bat' },
-  { value: 'none', label: 'None' },
+  { value: 'left-hand', label: 'Left-hand bat' },
+  { value: 'right-hand', label: 'Right-hand bat' },
 ]
 
 const BOWLING_STYLES = [
-  { value: 'Right-arm fast', label: 'Right-arm fast' },
-  { value: 'Right-arm medium', label: 'Right-arm medium' },
-  { value: 'Left-arm fast', label: 'Left-arm fast' },
-  { value: 'Left-arm medium', label: 'Left-arm medium' },
-  { value: 'Slow left-arm orthodox', label: 'Slow left-arm orthodox' },
-  { value: 'Slow left-arm chinaman', label: 'Slow left-arm chinaman' },
-  { value: 'Right-arm Off Break', label: 'Right-arm Off Break' },
-  { value: 'Right-arm Leg Break', label: 'Right-arm Leg Break' },
-  { value: 'none', label: 'None' },
+  { value: 'right-arm-fast', label: 'Right-arm fast' },
+  { value: 'right-arm-medium', label: 'Right-arm medium' },
+  { value: 'left-arm-fast', label: 'Left-arm fast' },
+  { value: 'left-arm-spin', label: 'Left-arm spin' },
 ]
 
 const PLAYING_ROLES = [
-  { value: 'Top-order batter', label: 'Top-order batter' },
-  { value: 'Middle-order batter', label: 'Middle-order batter' },
-  { value: 'Wicket-keeper batter', label: 'Wicket-keeper batter' },
-  { value: 'Wicket-keeper', label: 'Wicket-keeper' },
-  { value: 'Bowler', label: 'Bowler' },
-  { value: 'All-rounder', label: 'All-rounder' },
-  { value: 'Lower-order batter', label: 'Lower-order batter' },
-  { value: 'Opening batter', label: 'Opening batter' },
-  { value: 'none', label: 'None' },
+  { value: 'batsman', label: 'Batsman' },
+  { value: 'bowler', label: 'Bowler' },
+  { value: 'all-rounder', label: 'All-rounder' },
+  { value: 'wicket-keeper', label: 'Wicket-keeper' },
 ]
 
 export function PlayersList() {
@@ -61,14 +51,16 @@ export function PlayersList() {
   })
   
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Changing a filter always goes back to the first page
+  const updateFilters = (next: typeof filters) => {
+    setFilters(next)
+    setCurrentPage(1)
+  }
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null)
   const limit = 10
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filters])
 
   // Prepare API params
   const playersParams = useMemo(() => {
@@ -102,14 +94,7 @@ export function PlayersList() {
   // Fetch players data
   const { playersData, isLoading, refetch } = usePlayers(playersParams)
 
-  // Get unique cities from API response
-  const cities = useMemo(() => {
-    if (!playersData?.results) return []
-    const uniqueCities = Array.from(
-      new Set(playersData.results.map((player) => player.city).filter(Boolean))
-    ).sort()
-    return uniqueCities.map((city) => ({ value: city, label: city }))
-  }, [playersData])
+  const { cities } = useCities()
 
   // const handleDelete = (player: Player) => {
   //   setSelectedPlayer(player)
@@ -140,7 +125,7 @@ export function PlayersList() {
   }
 
   const handleResetFilters = () => {
-    setFilters({
+    updateFilters({
       name: '',
       city: '',
       battingStyle: '',
@@ -170,14 +155,14 @@ export function PlayersList() {
           <Input
             placeholder="Search by name..."
             value={filters.name}
-            onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+            onChange={(e) => updateFilters({ ...filters, name: e.target.value })}
             className="w-full sm:min-w-[250px] sm:max-w-[300px] border-2 focus:border-primary"
           />
           <Select
             value={filters.city}
             onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
               const value = typeof e === 'string' ? e : e.target.value
-              setFilters({ ...filters, city: value })
+              updateFilters({ ...filters, city: value })
             }}
             className="flex-1 border-2 focus:border-primary"
             placeholder="All Cities"
@@ -193,7 +178,7 @@ export function PlayersList() {
             value={filters.battingStyle}
             onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
               const value = typeof e === 'string' ? e : e.target.value
-              setFilters({ ...filters, battingStyle: value })
+              updateFilters({ ...filters, battingStyle: value })
             }}
             className="flex-1 border-2 focus:border-primary"
             placeholder="All Batting Styles"
@@ -214,7 +199,7 @@ export function PlayersList() {
               value={filters.bowlingStyle}
               onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
                 const value = typeof e === 'string' ? e : e.target.value
-                setFilters({ ...filters, bowlingStyle: value })
+                updateFilters({ ...filters, bowlingStyle: value })
               }}
               className="flex-1 border-2 focus:border-primary"
               placeholder="All Bowling Styles"
@@ -230,7 +215,7 @@ export function PlayersList() {
               value={filters.role}
               onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
                 const value = typeof e === 'string' ? e : e.target.value
-                setFilters({ ...filters, role: value })
+                updateFilters({ ...filters, role: value })
               }}
               className="flex-1 border-2 focus:border-primary"
               placeholder="All Roles"
@@ -288,19 +273,22 @@ export function PlayersList() {
                   <TableHead>Strike Rate</TableHead>
                   <TableHead>Economy</TableHead>
                   <TableHead>Average</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {players.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="h-24 text-center">
+                    <TableCell colSpan={12} className="h-24 text-center">
                       No players found.
                     </TableCell>
                   </TableRow>
                 ) : (
                   players.map((player) => (
-                    <TableRow key={player.playerId}>
+                    <TableRow
+                      key={player.playerId}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/players/${player.playerId}`)}
+                    >
                       <TableCell className="font-medium">{player.name}</TableCell>
                       <TableCell>{player.city}</TableCell>
                       <TableCell>{player.playingRole}</TableCell>
@@ -322,24 +310,6 @@ export function PlayersList() {
                       </TableCell>
                       <TableCell>
                         {player.average > 0 ? player.average.toFixed(2) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate(`/players/${player.playerId}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {/* <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(player)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red" />
-                          </Button> */}
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))

@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Filter, X } from 'lucide-react'
 import type { ChangeEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { usePlayers } from '../../hooks/usePlayers'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -81,18 +81,15 @@ export function PlayerSelectionDialog({
   )
   const limit = 20
 
-  // Reset to page 1 when applied filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [appliedFilters])
-
   // Sync local selection with prop when dialog opens
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setLocalSelectedIds(new Set(selectedPlayerIds))
       setFilterDialogOpen(false)
     }
-  }, [open, selectedPlayerIds])
+  }
 
   // Prepare API params based on applied filters
   const playersParams = useMemo(() => {
@@ -167,6 +164,7 @@ export function PlayerSelectionDialog({
 
   const handleApplyFilters = () => {
     setAppliedFilters({ ...filters })
+    setCurrentPage(1)
     setFilterDialogOpen(false)
   }
 
@@ -180,12 +178,14 @@ export function PlayerSelectionDialog({
     }
     setFilters(emptyFilters)
     setAppliedFilters(emptyFilters)
+    setCurrentPage(1)
     setFilterDialogOpen(false)
   }
 
   const handleRemoveFilter = (filterKey: keyof typeof appliedFilters) => {
     const newFilters = { ...appliedFilters, [filterKey]: '' }
     setAppliedFilters(newFilters)
+    setCurrentPage(1)
     setFilters(newFilters)
   }
 

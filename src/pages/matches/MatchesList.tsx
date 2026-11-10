@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/common/PageHeader'
@@ -22,6 +22,8 @@ const STATUS_OPTIONS = [
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'live', label: 'Live' },
   { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'abandoned', label: 'Abandoned' },
 ]
 
 export function MatchesList() {
@@ -35,14 +37,16 @@ export function MatchesList() {
   })
   
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Changing a filter always goes back to the first page
+  const updateFilters = (next: typeof filters) => {
+    setFilters(next)
+    setCurrentPage(1)
+  }
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const limit = 10
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filters])
 
   // Prepare API params
   const matchesParams = useMemo(() => {
@@ -97,7 +101,7 @@ export function MatchesList() {
   }
 
   const handleResetFilters = () => {
-    setFilters({
+    updateFilters({
       team_name: '',
       status: '',
     })
@@ -123,14 +127,14 @@ export function MatchesList() {
           <Input
             placeholder="Search by team name..."
             value={filters.team_name}
-            onChange={(e) => setFilters({ ...filters, team_name: e.target.value })}
+            onChange={(e) => updateFilters({ ...filters, team_name: e.target.value })}
             className="w-full border-2 focus:border-primary"
           />
           <Select
             value={filters.status}
             onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
               const value = typeof e === 'string' ? e : e.target.value
-              setFilters({ ...filters, status: value })
+              updateFilters({ ...filters, status: value })
             }}
             className="w-full border-2 focus:border-primary"
             placeholder="All Statuses"
@@ -193,13 +197,17 @@ export function MatchesList() {
                   </TableRow>
                 ) : (
                   matches.map((match) => (
-                    <TableRow key={match.id}>
+                    <TableRow
+                      key={match.id}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/matches/${match.id}`)}
+                    >
                       <TableCell className="font-medium">{match.title}</TableCell>
                       <TableCell>
                         {match.tournamentName || match.matchType}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(match.date), 'MMM dd, yyyy')}
+                        {match.date ? format(new Date(match.date), 'MMM dd, yyyy') : '-'}
                       </TableCell>
                       <TableCell>{match.location}</TableCell>
                       <TableCell>
@@ -221,14 +229,10 @@ export function MatchesList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/matches/${match.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(match)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(match)
+                            }}
                           >
                             <Trash2 className="h-4 w-4 text-red" />
                           </Button>

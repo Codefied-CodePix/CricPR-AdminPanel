@@ -1,4 +1,4 @@
-export function exportTableToCSV(data: any[], filename: string) {
+export function exportTableToCSV(data: object[], filename: string) {
   if (!data || data.length === 0) {
     console.warn('No data to export')
     return
@@ -12,7 +12,7 @@ export function exportTableToCSV(data: any[], filename: string) {
     headers.join(','),
     ...data.map(row =>
       headers.map(header => {
-        const value = row[header]
+        const value = (row as Record<string, unknown>)[header]
         // Handle values that might contain commas or quotes
         if (value === null || value === undefined) return ''
         const stringValue = String(value)

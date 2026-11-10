@@ -162,7 +162,7 @@ export function TournamentDetail() {
             </div>
           </CardHeader>
           <CardContent className="relative">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{tournament.matchesPlayed.length}</div>
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{tournament.matchesPlayed.filter((m) => m.status === 'completed').length}</div>
             <p className="text-xs text-muted-foreground mt-1">Completed matches</p>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/common/PageHeader'
@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Download } from 'lucide-react'
 import { exportTableToCSV } from '../../utils/csv'
 import { useTeams } from '../../hooks/useTeams'
+import { useCities } from '../../hooks/useCities'
 import { teamsApi } from '../../services/teamsApi'
 import type { Team } from '../../services/teamsApi'
 
@@ -36,14 +37,16 @@ export function TeamsList() {
   })
   
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Changing a filter always goes back to the first page
+  const updateFilters = (next: typeof filters) => {
+    setFilters(next)
+    setCurrentPage(1)
+  }
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const limit = 10
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [filters])
 
   // Prepare API params
   const teamsParams = useMemo(() => {
@@ -73,14 +76,7 @@ export function TeamsList() {
   // Fetch teams data
   const { teamsData, isLoading, refetch } = useTeams(teamsParams)
 
-  // Get unique cities from API response
-  const cities = useMemo(() => {
-    if (!teamsData?.results) return []
-    const uniqueCities = Array.from(
-      new Set(teamsData.results.map((team) => team.city).filter(Boolean))
-    ).sort()
-    return uniqueCities.map((city) => ({ value: city, label: city }))
-  }, [teamsData])
+  const { cities } = useCities()
 
   const handleDelete = (team: Team) => {
     setSelectedTeam(team)
@@ -111,7 +107,7 @@ export function TeamsList() {
   }
 
   const handleResetFilters = () => {
-    setFilters({
+    updateFilters({
       name: '',
       city: '',
       sortBy: '',
@@ -139,14 +135,14 @@ export function TeamsList() {
           <Input
             placeholder="Search by name..."
             value={filters.name}
-            onChange={(e) => setFilters({ ...filters, name: e.target.value })}
+            onChange={(e) => updateFilters({ ...filters, name: e.target.value })}
             className="w-full sm:min-w-[250px] sm:max-w-[300px] border-2 focus:border-primary"
           />
           <Select
             value={filters.city}
             onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
               const value = typeof e === 'string' ? e : e.target.value
-              setFilters({ ...filters, city: value })
+              updateFilters({ ...filters, city: value })
             }}
             className="flex-1 border-2 focus:border-primary"
             placeholder="All Cities"
@@ -167,7 +163,7 @@ export function TeamsList() {
               value={filters.sortBy}
               onChange={(e: ChangeEvent<HTMLSelectElement> | string) => {
                 const value = typeof e === 'string' ? e : e.target.value
-                setFilters({ ...filters, sortBy: value })
+                updateFilters({ ...filters, sortBy: value })
               }}
               className="flex-1 border-2 focus:border-primary"
               placeholder="Sort By"
@@ -233,7 +229,11 @@ export function TeamsList() {
                   </TableRow>
                 ) : (
                   teams.map((team) => (
-                    <TableRow key={team.teamId}>
+                    <TableRow
+                      key={team.teamId}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/teams/${team.teamId}`)}
+                    >
                       <TableCell className="font-medium">{team.teamName}</TableCell>
                       <TableCell>{team.captainName}</TableCell>
                       <TableCell>{team.city}</TableCell>
@@ -247,14 +247,10 @@ export function TeamsList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/teams/${team.teamId}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(team)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(team)
+                            }}
                           >
                             <Trash2 className="h-4 w-4 text-red" />
                           </Button>
