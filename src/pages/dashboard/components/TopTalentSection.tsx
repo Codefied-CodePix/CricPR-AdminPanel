@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -63,37 +63,31 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
 
   // Reset accumulated data when role changes (not when city filter changes)
   // This ensures cities remain available even when a city filter is applied
-  useEffect(() => {
+  const [prevRole, setPrevRole] = useState(apiRole);
+  const [accumulatedResults, setAccumulatedResults] = useState<TopTalentPlayer[] | null>(null);
+  if (prevRole !== apiRole) {
+    setPrevRole(apiRole);
     setAllPlayers([]);
     setAllCities([]);
     setCurrentPage(1);
-  }, [apiRole]);
+    // The previous role's results are still on screen until the new ones arrive; don't accumulate them
+    setAccumulatedResults(topTalentData?.results ?? null);
+  } else if (topTalentData?.results && topTalentData.results !== accumulatedResults) {
+    // Accumulate all players and cities from API responses
+    const results = topTalentData.results;
+    setAccumulatedResults(results);
 
-  // Accumulate all players and cities from API responses
-  useEffect(() => {
-    if (topTalentData?.results) {
-      // Accumulate players
-      setAllPlayers((prev) => {
-        const existingIds = new Set(prev.map((p) => p.playerId));
-        const newPlayers = topTalentData.results.filter(
-          (player) => !existingIds.has(player.playerId)
-        );
-        return [...prev, ...newPlayers];
-      });
+    const existingIds = new Set(allPlayers.map((p) => p.playerId));
+    const newPlayers = results.filter((player) => !existingIds.has(player.playerId));
+    if (newPlayers.length > 0) setAllPlayers([...allPlayers, ...newPlayers]);
 
-      // Always accumulate cities from all responses, regardless of city filter
-      // This ensures we have all cities available in the dropdown even when a filter is applied
-      const citiesFromResponse = topTalentData.results
-        .map((player) => player.city)
-        .filter((city): city is string => Boolean(city));
-      
-      setAllCities((prev) => {
-        const combined = [...prev, ...citiesFromResponse];
-        const unique = Array.from(new Set(combined));
-        return unique.sort();
-      });
-    }
-  }, [topTalentData?.results]);
+    // Always accumulate cities from all responses, regardless of city filter
+    // This ensures we have all cities available in the dropdown even when a filter is applied
+    const citiesFromResponse = results
+      .map((player) => player.city)
+      .filter((city): city is string => Boolean(city));
+    setAllCities(Array.from(new Set([...allCities, ...citiesFromResponse])).sort());
+  }
 
   // Get unique cities - use accumulated cities instead of just current results
   const cities = useMemo(() => {
@@ -114,10 +108,6 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
     return topTalentData?.results || [];
   }, [allPlayers, topTalentData?.results, searchQuery]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [cityFilter, skillFilter]);
 
   const skills = ["batsman", "bowler", "allrounder", "wicketkeeper"];
 
@@ -154,6 +144,7 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                     ? value 
                     : (value as React.ChangeEvent<HTMLSelectElement>)?.target?.value || '';
                   setCityFilter(cityValue);
+                  setCurrentPage(1);
                 }}
                 placeholder="All Cities"
                 className="w-full border-2 focus:border-primary"
@@ -174,6 +165,7 @@ export function TopTalentSection({ initialSkillFilter = "batsman" }: TopTalentSe
                     ? value 
                     : (value as React.ChangeEvent<HTMLSelectElement>)?.target?.value || 'batsman';
                   setSkillFilter(skillValue);
+                  setCurrentPage(1);
                 }}
                 placeholder="Select Skill"
                 className="w-full border-2 focus:border-primary"

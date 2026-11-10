@@ -33,8 +33,8 @@ export function MatchDetail() {
   }
 
   const match = matchData
-  // Parse team names from matchTitle (e.g., "Town Titans vs Tiger 1")
-  const [teamA, teamB] = match.matchTitle?.split(' vs ') || ['Team A', 'Team B']
+  const teamA = match.teamAName
+  const teamB = match.teamBName
   const teamALogoFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(teamA)}&background=0E795D&color=fff&size=128`
   const teamBLogoFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(teamB)}&background=01411C&color=fff&size=128`
   const teamALogo = match.teamALogo || teamALogoFallback
@@ -258,7 +258,7 @@ export function MatchDetail() {
             </div>
             <div className="space-y-3 pt-3 border-t border-borderShadcn/30">
               {(() => {
-                const topBatsman = teamAData.battingStats
+                const topBatsman = [...teamAData.battingStats]
                   .filter(p => p.hasBat)
                   .sort((a, b) => b.runs - a.runs)[0]
                 return topBatsman ? (
@@ -280,7 +280,7 @@ export function MatchDetail() {
                 ) : null
               })()}
               {(() => {
-                const topBowler = teamBData.bowlingStats
+                const topBowler = [...teamBData.bowlingStats]
                   .sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0]
                 return topBowler ? (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10">
@@ -332,7 +332,7 @@ export function MatchDetail() {
             </div>
             <div className="space-y-3 pt-3 border-t border-borderShadcn/30">
               {(() => {
-                const topBatsman = teamBData.battingStats
+                const topBatsman = [...teamBData.battingStats]
                   .filter(p => p.hasBat)
                   .sort((a, b) => b.runs - a.runs)[0]
                 return topBatsman ? (
@@ -354,7 +354,7 @@ export function MatchDetail() {
                 ) : null
               })()}
               {(() => {
-                const topBowler = teamAData.bowlingStats
+                const topBowler = [...teamAData.bowlingStats]
                   .sort((a, b) => b.wickets - a.wickets || a.runs - b.runs)[0]
                 return topBowler ? (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10">
@@ -479,8 +479,9 @@ export function MatchDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamBData.bowlingStats.length > 0 ? (
-                    teamBData.bowlingStats.map((player, index) => (
+                  {/* bowlingStats of an innings are the opposition's bowlers, so team B's bowlers sit on team A's innings */}
+                  {teamAData.bowlingStats.length > 0 ? (
+                    teamAData.bowlingStats.map((player, index) => (
                       <TableRow key={index} className="hover:bg-primary/5 transition-colors">
                         <TableCell className="font-medium">{player.playerName}</TableCell>
                         <TableCell className="text-right">{player.overs}</TableCell>
@@ -600,8 +601,8 @@ export function MatchDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teamAData.bowlingStats.length > 0 ? (
-                    teamAData.bowlingStats.map((player, index) => (
+                  {teamBData.bowlingStats.length > 0 ? (
+                    teamBData.bowlingStats.map((player, index) => (
                       <TableRow key={index} className="hover:bg-primary/5 transition-colors">
                         <TableCell className="font-medium">{player.playerName}</TableCell>
                         <TableCell className="text-right">{player.overs}</TableCell>

@@ -8,24 +8,13 @@ import { Badge } from '../../components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
 import { PlayerAvatar } from '../../components/common/PlayerAvatar'
 import { useTeam } from '../../hooks/useTeam'
-import { useTeams } from '../../hooks/useTeams'
 import { format } from 'date-fns'
-import { useMemo } from 'react'
 
 export function TeamDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { teamData, isLoading, isError } = useTeam(id)
   
-  // Fetch teams list to get correct wins/losses data
-  const { teamsData } = useTeams({ limit: 1000 }) // Fetch all teams to find the matching one
-  
-  // Find the matching team from teams list to get correct wins/losses
-  const teamFromList = useMemo(() => {
-    if (!teamsData?.results || !id) return null
-    return teamsData.results.find(team => team.teamId === id)
-  }, [teamsData?.results, id])
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -49,9 +38,8 @@ export function TeamDetail() {
   const fallbackLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(team.teamName)}&background=0E795D&color=fff&size=256`
   const teamLogo = team.teamLogo || fallbackLogo
   
-  // Use wins/losses from teams list API if available, otherwise fallback to team detail API
-  const wins = teamFromList?.wins ?? team.wins
-  const losses = teamFromList?.losses ?? team.losses
+  const wins = team.wins
+  const losses = team.losses
   // Recalculate winRate based on correct wins/losses
   const winRate = wins + losses > 0 ? (wins / (wins + losses)) * 100 : 0
 
