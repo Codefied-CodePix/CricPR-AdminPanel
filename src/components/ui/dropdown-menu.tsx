@@ -37,11 +37,11 @@ const DropdownMenuTrigger = React.forwardRef<
   }
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
       ...props,
       onClick: handleClick,
       'data-dropdown-trigger': true,
-    } as any)
+    })
   }
 
   return (

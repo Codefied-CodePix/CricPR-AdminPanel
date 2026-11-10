@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 import { Button } from '../../components/ui/button'
 import { PageHeader } from '../../components/common/PageHeader'
@@ -183,7 +183,11 @@ export function TournamentsList() {
                   </TableRow>
                 ) : (
                   tournaments.map((tournament) => (
-                    <TableRow key={tournament.tournamentId}>
+                    <TableRow
+                      key={tournament.tournamentId}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/tournaments/${tournament.tournamentId}`)}
+                    >
                       <TableCell className="font-medium">{tournament.name}</TableCell>
                       <TableCell>
                         {format(new Date(tournament.startDate), 'MMM dd, yyyy')}
@@ -196,9 +200,9 @@ export function TournamentsList() {
                       <TableCell>
                         <Badge
                           variant={
-                            tournament.status === 'Completed'
+                            tournament.status.toLowerCase() === 'completed'
                               ? 'success'
-                              : tournament.status === 'Upcoming'
+                              : tournament.status.toLowerCase() === 'upcoming'
                               ? 'warning'
                               : 'secondary'
                           }
@@ -211,14 +215,10 @@ export function TournamentsList() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => navigate(`/tournaments/${tournament.tournamentId}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(tournament)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(tournament)
+                            }}
                             disabled={isDeleting}
                           >
                             <Trash2 className="h-4 w-4 text-red" />

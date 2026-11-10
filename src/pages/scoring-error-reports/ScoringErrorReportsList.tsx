@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
-import { AlertTriangle, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { PageHeader } from '../../components/common/PageHeader'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -27,10 +27,6 @@ export function ScoringErrorReportsList() {
   const [currentPage, setCurrentPage] = useState(1)
   const limit = 10
 
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [matchIdFilter])
-
   const params = useMemo(
     () => ({
       page: currentPage,
@@ -48,6 +44,7 @@ export function ScoringErrorReportsList() {
     if (!value) {
       setMatchIdError('')
       setMatchIdFilter('')
+      setCurrentPage(1)
       return
     }
     if (!UUID_RE.test(value)) {
@@ -56,6 +53,7 @@ export function ScoringErrorReportsList() {
     }
     setMatchIdError('')
     setMatchIdFilter(value)
+    setCurrentPage(1)
   }
 
   const resetFilters = () => {
@@ -121,13 +119,12 @@ export function ScoringErrorReportsList() {
                   <TableHead>Scorer</TableHead>
                   <TableHead>Tournament</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={6} className="h-24 text-center">
                       No scoring error reports found.
                     </TableCell>
                   </TableRow>
@@ -182,18 +179,6 @@ export function ScoringErrorReportsList() {
                         >
                           {report.emailSent ? 'Sent' : 'Not sent'}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/scoring-error-reports/${report.id}`)
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

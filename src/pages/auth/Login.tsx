@@ -53,7 +53,7 @@ export function Login() {
       }
     };
     checkAuth();
-  }, []); // Only run on mount
+  }, [navigate]); // Only run on mount
 
   useEffect(() => {
     // Initialize theme
@@ -96,10 +96,10 @@ export function Login() {
       });
       // Navigate after login - the store is already updated by loginAsync
       navigate("/dashboard", { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       addToast({
         title: "Error",
-        description: error.message || "Invalid credentials",
+        description: (error instanceof Error && error.message) || "Invalid credentials",
         variant: "destructive",
       });
     }

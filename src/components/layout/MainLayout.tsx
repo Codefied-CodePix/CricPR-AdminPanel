@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar'
 // import { Header } from './Header'
 
 export function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
 
   useEffect(() => {
@@ -17,10 +17,6 @@ export function MainLayout() {
       } else {
         setSidebarOpen(true)
       }
-    }
-    // Set initial state based on screen size
-    if (window.innerWidth >= 1024) {
-      setSidebarOpen(true)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)

@@ -212,6 +212,96 @@ export interface TournamentDetail {
   pointsTable: TournamentPointsTable
 }
 
+// Raw shapes of GET /admin/tournaments/:id (only the fields we read)
+interface TournamentPointsRowApi {
+  id?: string
+  stageId?: string
+  groupId?: string | null
+  teamId?: string
+  teamName?: string
+  team?: { id?: string; name?: string; logo?: string | null; logoUrl?: string | null }
+  position?: number
+  played?: number
+  won?: number
+  lost?: number
+  tied?: number
+  noResult?: number
+  points?: number
+  netRunRate?: number | string
+  totalRunsScored?: number
+  totalRunsConceded?: number
+  totalOversPlayed?: number | string
+  totalOversFaced?: number | string
+  totalWicketsLost?: number
+  totalWicketsTaken?: number
+  highestScore?: number
+  lowestScore?: number | null
+  qualificationStatus?: string
+  superOverWins?: number
+  superOverLosses?: number
+}
+
+interface TournamentFixtureApi {
+  matchId?: string | null
+  matchNumber?: number
+  stageId?: string
+  stage?: { id?: string; name?: string } | null
+  group?: { id?: string; name?: string } | null
+  matchStatus?: string
+  venue?: string
+  startDatetime?: string | null
+  teamAId?: string
+  teamBId?: string
+  teamAName?: string
+  teamBName?: string
+  teamA?: { id?: string; name?: string; logo?: string | null; logoUrl?: string | null }
+  teamB?: { id?: string; name?: string; logo?: string | null; logoUrl?: string | null }
+  liveScore?: {
+    status?: string
+    location?: string
+    startDatetime?: string
+    endDateTime?: string
+    totalOvers?: number
+    winner?: { id?: string; name?: string; score?: string } | null
+    teams?: Array<{
+      teamInstanceId?: string
+      runs?: number
+      wickets?: number
+      overs?: string
+    }>
+  } | null
+}
+
+interface TournamentDetailApi {
+  id?: string
+  name?: string
+  startDate?: string
+  endDate?: string
+  status?: string
+  logo?: string | null
+  coverImage?: string | null
+  banner?: string | null
+  format?: string
+  currentTeamsCount?: number
+  totalTeams?: number
+  totalMatches?: number
+  teams?: unknown[]
+  fixtures?: TournamentFixtureApi[]
+  matches?: TournamentFixtureApi[]
+  pointsTable?: {
+    stages?: Array<{
+      stageId?: string
+      stageName?: string
+      format?: string
+      groups?: Array<{
+        groupId?: string | null
+        groupName?: string | null
+        pointsTable?: TournamentPointsRowApi[]
+      }>
+    }>
+  }
+}
+
 function mapTournament(row: Record<string, unknown>): Tournament {
   return {
     tournamentId: String(row.id || ''),
@@ -220,7 +310,9 @@ function mapTournament(row: Record<string, unknown>): Tournament {
     endDate: String(row.endDate || row.startDate || new Date().toISOString()),
     status: String(row.status || 'upcoming'),
     totalMatches: Number(row.totalMatches || 0),
-    totalTeams: Number(row.totalTeams || (Array.isArray(row.teams) ? row.teams.length : 0)),
+    totalTeams: Number(
+      row.totalTeams ?? row.currentTeamsCount ?? (Array.isArray(row.teams) ? row.teams.length : 0)
+    ),
   }
 }
 
@@ -252,33 +344,148 @@ export const tournamentsApi = {
 
   getTournamentById: async (tournamentId: string): Promise<TournamentDetail> => {
     try {
-      const response = await api.get<
-        V2Envelope<{
-          id?: string
-          name?: string
-          startDate?: string
-          endDate?: string
-          status?: string
-          logo?: string | null
-          banner?: string | null
-          teams?: unknown[]
-          stages?: Array<Record<string, unknown>>
-        }>
-      >(`/admin/tournaments/${tournamentId}`)
+      const response = await api.get<V2Envelope<TournamentDetailApi>>(
+        `/admin/tournaments/${tournamentId}`
+      )
 
       const t = unwrapData(response)
-      const stagesRaw = t.stages || []
-      const stages: TournamentStage[] = stagesRaw.map((s, idx) => ({
-        id: String(s.id || ''),
+      const stageRows = t.pointsTable?.stages || []
+
+      const stages: TournamentStage[] = stageRows.map((s, idx) => ({
+        id: String(s.stageId || ''),
         tournamentId: String(t.id || tournamentId),
-        name: String(s.name || `Stage ${idx + 1}`),
-        stageOrder: Number(s.stageOrder || idx + 1),
+        name: String(s.stageName || `Stage ${idx + 1}`),
+        stageOrder: idx + 1,
         format: String(s.format || ''),
-        status: String(s.status || ''),
-        hasGroups: Boolean(s.hasGroups),
-        numberOfGroups: Number(s.numberOfGroups || 0),
+        status: '',
+        hasGroups: (s.groups || []).some((g) => g.groupId),
+        numberOfGroups: (s.groups || []).filter((g) => g.groupId).length,
         groups: [],
       }))
+
+      const toNumber = (value: unknown) => {
+        const n = Number(value)
+        return Number.isFinite(n) ? n : 0
+      }
+
+      const mapRow = (
+        r: TournamentPointsRowApi,
+        stageId: string
+      ): TournamentPointsTableTeam => ({
+        id: String(r.id || ''),
+        tournamentId: String(t.id || tournamentId),
+        stageId: String(r.stageId || stageId),
+        groupId: r.groupId ?? null,
+        teamId: {
+          id: String(r.team?.id || r.teamId || ''),
+          logo: r.team?.logoUrl ?? r.team?.logo ?? null,
+          name: String(r.team?.name || r.teamName || 'Unknown Team'),
+          location: '',
+        },
+        tournamentTeamId: String(r.teamId || ''),
+        position: toNumber(r.position),
+        matchesPlayed: toNumber(r.played),
+        matchesWon: toNumber(r.won),
+        matchesLost: toNumber(r.lost),
+        matchesDrawn: toNumber(r.tied),
+        matchesNoResult: toNumber(r.noResult),
+        points: toNumber(r.points),
+        netRunRate: toNumber(r.netRunRate),
+        totalRunsScored: toNumber(r.totalRunsScored),
+        totalRunsConceded: toNumber(r.totalRunsConceded),
+        totalOversPlayed: toNumber(r.totalOversPlayed),
+        totalOversFaced: toNumber(r.totalOversFaced),
+        totalWicketsLost: toNumber(r.totalWicketsLost),
+        totalWicketsTaken: toNumber(r.totalWicketsTaken),
+        highestScore: toNumber(r.highestScore),
+        lowestScore: toNumber(r.lowestScore),
+        winStreak: 0,
+        form: '',
+        qualificationStatus: String(r.qualificationStatus || ''),
+        tieBreakingFactor: 0,
+        superOverWins: toNumber(r.superOverWins),
+        superOverLosses: toNumber(r.superOverLosses),
+      })
+
+      const pointsStages: TournamentPointsTableStage[] = stageRows.map((s) => {
+        const stageId = String(s.stageId || '')
+        const groups = (s.groups || []).map((g, gi) => ({
+          id: g.groupId ?? undefined,
+          groupName: String(g.groupName || ''),
+          groupOrder: gi + 1,
+          currentTeamsCount: (g.pointsTable || []).length,
+          status: '',
+          pointsTable: (g.pointsTable || []).map((r) => mapRow(r, stageId)),
+        }))
+        // Knockout stages come back as a single group without a groupId: show them as a flat table
+        const hasGroups = groups.some((g) => g.id)
+        return {
+          id: stageId,
+          name: String(s.stageName || ''),
+          format: String(s.format || ''),
+          status: '',
+          hasGroups,
+          pointsForWin: 2,
+          pointsForDraw: 1,
+          pointsForLoss: 0,
+          groups: hasGroups ? groups : [],
+          pointsTable: hasGroups ? [] : groups.flatMap((g) => g.pointsTable),
+        }
+      })
+
+      const fixtures = t.fixtures || t.matches || []
+      const matchesPlayed: TournamentMatch[] = fixtures
+        .filter((f) => f.matchId)
+        .map((f) => {
+          const live = f.liveScore
+          const winner = live?.winner
+          const winnerScore = live?.teams?.find((x) => x.teamInstanceId === winner?.id)
+          const loserScore = live?.teams?.find((x) => x.teamInstanceId !== winner?.id)
+          return {
+            matchId: String(f.matchId),
+            matchNumber: toNumber(f.matchNumber),
+            stage: {
+              id: String(f.stage?.id || f.stageId || ''),
+              name: String(f.stage?.name || ''),
+              stageOrder: 0,
+            },
+            group: f.group ? { id: String(f.group.id || ''), name: String(f.group.name || '') } : null,
+            teamA: {
+              id: String(f.teamA?.id || f.teamAId || ''),
+              name: String(f.teamA?.name || f.teamAName || ''),
+              logo: f.teamA?.logoUrl ?? f.teamA?.logo ?? null,
+            },
+            teamB: {
+              id: String(f.teamB?.id || f.teamBId || ''),
+              name: String(f.teamB?.name || f.teamBName || ''),
+              logo: f.teamB?.logoUrl ?? f.teamB?.logo ?? null,
+            },
+            matchConfig: {
+              overs: toNumber(live?.totalOvers),
+              matchType: '',
+              ballType: '',
+              pitchType: '',
+              createdAt: '',
+            },
+            location: String(f.venue || live?.location || ''),
+            status: String(f.matchStatus || live?.status || ''),
+            startDateTime: String(f.startDatetime || live?.startDatetime || ''),
+            endDateTime: String(live?.endDateTime || ''),
+            result:
+              winner && winnerScore
+                ? {
+                    winningTeamId: String(winner.id || ''),
+                    winningTeamName: String(winner.name || ''),
+                    winningTeamScore: toNumber(winnerScore.runs),
+                    winningTeamWickets: toNumber(winnerScore.wickets),
+                    winningTeamOvers: toNumber(winnerScore.overs),
+                    losingTeamScore: toNumber(loserScore?.runs),
+                    losingTeamWickets: toNumber(loserScore?.wickets),
+                    losingTeamOvers: toNumber(loserScore?.overs),
+                  }
+                : null,
+          }
+        })
 
       return {
         tournamentId: String(t.id || tournamentId),
@@ -286,11 +493,11 @@ export const tournamentsApi = {
         startDate: String(t.startDate || new Date().toISOString()),
         endDate: String(t.endDate || t.startDate || new Date().toISOString()),
         status: String(t.status || 'upcoming'),
-        tournamentLogo: t.logo ?? null,
+        tournamentLogo: t.logo ?? t.coverImage ?? null,
         tournamentBanner: t.banner ?? null,
-        totalMatches: 0,
-        totalTeams: Array.isArray(t.teams) ? t.teams.length : 0,
-        matchesPlayed: [],
+        totalMatches: toNumber(t.totalMatches ?? fixtures.length),
+        totalTeams: t.currentTeamsCount ?? t.totalTeams ?? (Array.isArray(t.teams) ? t.teams.length : 0),
+        matchesPlayed,
         matchesFixtures: {
           results: stages,
           page: 1,
@@ -302,21 +509,10 @@ export const tournamentsApi = {
           tournament: {
             id: String(t.id || tournamentId),
             name: String(t.name || 'Unknown'),
-            format: '',
+            format: String(t.format || ''),
             status: String(t.status || ''),
           },
-          stages: stages.map((s) => ({
-            id: s.id,
-            name: s.name,
-            format: s.format,
-            status: s.status,
-            hasGroups: s.hasGroups,
-            pointsForWin: 2,
-            pointsForDraw: 1,
-            pointsForLoss: 0,
-            groups: [],
-            pointsTable: [],
-          })),
+          stages: pointsStages,
         },
       }
     } catch (error) {
