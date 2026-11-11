@@ -21,8 +21,8 @@ export function usePlayers(params: PlayersParams = {}) {
   const playersQuery = useQuery({
     queryKey,
     queryFn: () => playersApi.getPlayers(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {

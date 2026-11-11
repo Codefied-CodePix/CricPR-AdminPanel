@@ -12,8 +12,8 @@ export function useTeam(teamId: string | undefined) {
       return teamsApi.getTeamById(teamId)
     },
     enabled: !!teamId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {

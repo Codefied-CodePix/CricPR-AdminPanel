@@ -65,7 +65,7 @@ export function RecentMatchesTable({ data, isLoading }: RecentMatchesTableProps)
                   </TableCell>
                   <TableCell>{match.tournamentName || match.matchType}</TableCell>
                   <TableCell>
-                    {format(new Date(match.startedAt), "MMM dd, yyyy")}
+                    {match.startedAt ? format(new Date(match.startedAt), "MMM dd, yyyy") : "-"}
                   </TableCell>
                   <TableCell>
                     <span

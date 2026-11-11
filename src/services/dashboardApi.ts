@@ -111,21 +111,6 @@ export interface TopRunsAndWicketsParams {
   ballType?: BallType
 }
 
-function mapMatchStatus(status?: string): string {
-  if (status === 'inProgress') return 'live'
-  if (status === 'completed') return 'completed'
-  if (status === 'notStarted' || status === 'pending' || status === 'postponed') {
-    return 'scheduled'
-  }
-  return status || 'scheduled'
-}
-
-function teamNameFromMatchSide(side: unknown): string {
-  if (!side || typeof side !== 'object') return 'TBD'
-  const s = side as { team?: { name?: string }; name?: string }
-  return s.team?.name || s.name || 'TBD'
-}
-
 function deriveMatchesOverTime(matches: RecentMatch[]): MatchesOverTime[] {
   const buckets = new Map<string, number>()
   for (const match of matches) {
@@ -224,46 +209,44 @@ export const dashboardApi = {
     params: RecentMatchesParams = {}
   ): Promise<RecentMatchesResponse> => {
     try {
-      const queryParams = new URLSearchParams()
-      if (params.matches) queryParams.append('matches', params.matches.toString())
-      if (params.page) queryParams.append('page', params.page.toString())
-
+      // /admin/recentMatches is not date-ordered and has no start date, so the dashboard reads the
+      // matches list instead: newest first, with date, tournament and result already resolved.
       const response = await api.get<
         V2Envelope<
           Array<{
             id: string
             title?: string
+            matchType?: string
+            tournamentName?: string | null
+            date?: string | null
             status?: string
-            startDatetime?: string
-            teamA?: unknown
-            teamB?: unknown
-            config?: { matchType?: string }
+            teamAName?: string | null
+            teamBName?: string | null
             result?: string | null
           }>
         >
-      >(`/admin/recentMatches?${queryParams.toString()}`)
+      >('/admin/teamMatches?page=1&limit=100')
 
       const envelope = response.data
       const rows = Array.isArray(envelope.data) ? envelope.data : []
-      const matches: RecentMatch[] = rows.map((m) => {
-        const teamA = teamNameFromMatchSide(m.teamA)
-        const teamB = teamNameFromMatchSide(m.teamB)
+      const all: RecentMatch[] = rows.map((m) => {
+        const teams = `${m.teamAName || 'TBD'} vs ${m.teamBName || 'TBD'}`
         return {
           id: m.id,
-          title: m.title || `${teamA} vs ${teamB}`,
-          teams: `${teamA} vs ${teamB}`,
-          matchType: m.config?.matchType || 'friendly',
-          tournamentName: null,
-          startedAt: m.startDatetime || new Date().toISOString(),
-          status: mapMatchStatus(m.status),
+          title: m.title || teams,
+          teams: m.title || teams,
+          matchType: m.matchType || 'friendly',
+          tournamentName: m.tournamentName ?? null,
+          startedAt: m.date || '',
+          status: m.status || 'scheduled',
           result: m.result ?? null,
         }
       })
 
       return {
-        matches,
+        matches: all.slice(0, params.matches ?? 10),
         pagination: envelope.pagination,
-        matchesOverTime: deriveMatchesOverTime(matches),
+        matchesOverTime: deriveMatchesOverTime(all),
       }
     } catch (error) {
       throw new Error(handleApiError(error))
