@@ -18,8 +18,8 @@ export function useMatches(params: MatchesParams = {}) {
   const matchesQuery = useQuery({
     queryKey,
     queryFn: () => matchesApi.getMatches(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {

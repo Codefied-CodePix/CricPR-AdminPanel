@@ -17,8 +17,8 @@ export function useTournaments(params: TournamentsParams = {}) {
   const tournamentsQuery = useQuery({
     queryKey,
     queryFn: () => tournamentsApi.getTournaments(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {

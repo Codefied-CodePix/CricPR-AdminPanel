@@ -254,7 +254,7 @@ export const dashboardApi = {
           teams: `${teamA} vs ${teamB}`,
           matchType: m.config?.matchType || 'friendly',
           tournamentName: null,
-          startedAt: m.startDatetime || new Date().toISOString(),
+          startedAt: m.startDatetime || '',
           status: mapMatchStatus(m.status),
           result: m.result ?? null,
         }
