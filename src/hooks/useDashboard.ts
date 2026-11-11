@@ -8,8 +8,8 @@ export function useDashboard() {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', 'numbers'],
     queryFn: () => dashboardApi.getDashboardNumbers(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -39,8 +39,8 @@ export function useTopTalent(params: TopTalentParams) {
   const topTalentQuery = useQuery({
     queryKey,
     queryFn: () => dashboardApi.getTopTalent(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -67,8 +67,8 @@ export function useRecentMatches(params: RecentMatchesParams = {}) {
   const recentMatchesQuery = useQuery({
     queryKey,
     queryFn: () => dashboardApi.getRecentMatches(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -87,8 +87,8 @@ export function useRecentSignups() {
   const recentSignupsQuery = useQuery({
     queryKey: ['dashboard', 'recentSignups'],
     queryFn: () => dashboardApi.getRecentSignups(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -114,8 +114,8 @@ export function useTopRunsAndWickets(params: TopRunsAndWicketsParams = {}) {
   const topRunsAndWicketsQuery = useQuery({
     queryKey,
     queryFn: () => dashboardApi.getTopRunsAndWickets(params),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   })
 
   return {

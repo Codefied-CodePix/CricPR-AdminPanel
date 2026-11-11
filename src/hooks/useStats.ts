@@ -9,8 +9,8 @@ export function useStats(params: StatsParams = {}) {
   const statsQuery = useQuery({
     queryKey: ['stats', params.ballType || 'leather'],
     queryFn: () => statsApi.getStats(params),
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -37,8 +37,8 @@ export function useStatsLeaderboards(params: TopRunsAndWicketsParams = {}) {
         wicketTakers: params.wicketTakers ?? 10,
         ballType: params.ballType,
       }),
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   })
 
   return {

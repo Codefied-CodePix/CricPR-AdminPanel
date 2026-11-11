@@ -15,8 +15,8 @@ export function useScoringErrorReports(params: ScoringErrorReportsParams = {}) {
   const query = useQuery({
     queryKey,
     queryFn: () => scoringErrorReportsApi.getReports(params),
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   })
 
   return {
@@ -33,8 +33,8 @@ export function useScoringErrorReport(reportId: string | undefined) {
     queryKey: ['scoring-error-reports', reportId],
     queryFn: () => scoringErrorReportsApi.getReportById(reportId!),
     enabled: Boolean(reportId),
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   })
 
   return {
