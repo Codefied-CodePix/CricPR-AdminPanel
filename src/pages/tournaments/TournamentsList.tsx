@@ -15,6 +15,7 @@ import { useTournaments } from '../../hooks/useTournaments'
 import { tournamentsApi } from '../../services/tournamentsApi'
 import type { Tournament } from '../../services/tournamentsApi'
 import { format } from 'date-fns'
+import { tournamentStatusVariant } from '../../utils/tournamentStatus'
 
 // Sort options
 const SORT_OPTIONS = [
@@ -198,15 +199,7 @@ export function TournamentsList() {
                       <TableCell>{tournament.totalMatches}</TableCell>
                       <TableCell>{tournament.totalTeams}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            tournament.status.toLowerCase() === 'completed'
-                              ? 'success'
-                              : tournament.status.toLowerCase() === 'upcoming'
-                              ? 'warning'
-                              : 'secondary'
-                          }
-                        >
+                        <Badge variant={tournamentStatusVariant(tournament.status)}>
                           {tournament.status}
                         </Badge>
                       </TableCell>

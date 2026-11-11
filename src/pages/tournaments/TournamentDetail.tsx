@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Avatar, AvatarImage, AvatarFallback } from '../../components/ui/avatar'
 import { useTournament } from '../../hooks/useTournament'
 import { format } from 'date-fns'
+import { tournamentStatusVariant } from '../../utils/tournamentStatus'
 
 export function TournamentDetail() {
   const { id } = useParams()
@@ -76,13 +77,7 @@ export function TournamentDetail() {
                   </span>
                 </div>
                 <Badge
-                  variant={
-                    tournament.status.toLowerCase() === 'ongoing'
-                      ? 'success'
-                      : tournament.status.toLowerCase() === 'upcoming'
-                      ? 'warning'
-                      : 'secondary'
-                  }
+                  variant={tournamentStatusVariant(tournament.status)}
                   className="bg-white/20 border-white/30 backdrop-blur-sm"
                 >
                   {tournament.status}
@@ -137,13 +132,7 @@ export function TournamentDetail() {
           </CardHeader>
           <CardContent className="relative">
             <Badge
-              variant={
-                tournament.status.toLowerCase() === 'ongoing'
-                  ? 'success'
-                  : tournament.status.toLowerCase() === 'upcoming'
-                  ? 'warning'
-                  : 'secondary'
-              }
+              variant={tournamentStatusVariant(tournament.status)}
               className="text-base px-3 py-1"
             >
               {tournament.status}
